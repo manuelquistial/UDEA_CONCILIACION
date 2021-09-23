@@ -21,7 +21,6 @@
                         <tr>
                         <th scope="col">{{ __('Nombre') }}</th>
                         <th scope="col">{{ __('Email') }}</th>
-                        <th scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>

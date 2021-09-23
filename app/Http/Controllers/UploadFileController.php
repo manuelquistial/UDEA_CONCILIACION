@@ -61,7 +61,7 @@ class UploadFileController extends Controller
             'num' => 'required',
         ]);
         $userId = Auth::id();
-        $porcentajes = DB::table('porcentajes')->get();
+        $porcentajes = DB::table('cn_porcentajes')->get();
         $salud = $porcentajes[0]->porcentaje_salud;
         $ingresos = $porcentajes[0]->porcentaje_ingresos;
         $value = request()->num;
