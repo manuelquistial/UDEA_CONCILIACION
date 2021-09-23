@@ -19,7 +19,5 @@ Route::get('/conciliacion', 'UploadFileController@downloadConciliacion');
 Route::get('/reservas', 'UploadFileController@downloadReservas');
 Route::get('/download', 'UploadFileController@download');
 Route::get('/users', 'ListUsersController@index')->name('list_users');
-Route::get('/users/delete/{id}', 'ListUsersController@destroy')->name('user.delete');
-Route::get('/users/update/{id}', 'ListUsersController@update')->name('user.rol');
 Route::get('/porcentajes', 'PorcentajeController@index')->name('list_porcentajes');
-Route::get('/porcentajes/update/{id}', 'PorcentajeController@update')->name('update_porcentajes');
+Route::post('/porcentajes/update', 'PorcentajeController@update')->name('update_porcentajes');

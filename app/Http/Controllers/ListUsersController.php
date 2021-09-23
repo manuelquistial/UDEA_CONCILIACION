@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\User;
-use App\Role;
+use App\Usuario;
+use App\Roles;
 use Auth;
 
 class ListUsersController extends Controller
@@ -21,47 +21,11 @@ class ListUsersController extends Controller
 
     public function index(){
 
-        $users = User::all();
+        $role = new Roles();
+        $users = $role->usuarioByRole(1)
+                    ->select('tr_usuarios.nombre_apellido','tr_usuarios.email')
+                    ->get();
 
         return view('list_users', compact('users'));
-    }
-
-    public function update(Request $request, $id){
-
-        $user = User::find($id);
-        $userId = Auth::id();
-        if($userId != $id){
-            if($user->roles[0]['name'] == "administrador"){
-                $user->roles()->detach(Role::where('name', "administrador")->first());
-                $user->roles()->attach(Role::where('name', "usuario")->first());
-            }else{
-                $user->roles()->detach(Role::where('name', "usuario")->first());
-                $user->roles()->attach(Role::where('name', "administrador")->first());
-            }
-            return redirect()->route('list_users');
-        }else{
-            $request->session()->flash('status', 'No puede cambiar su propio rol.');
-            return redirect()->route('list_users');
-        }
-    }
-
-    public function destroy(Request $request, $id) {
-
-        $userId = Auth::id();
-        if($userId != $id){
-            $users = User::findOrFail($id);
-            $users->delete();
-            if($users->roles[0]['name'] == "administrador"){
-                $users->roles()->detach(Role::where('name', "administrador")->first());
-            }else{
-                $users->roles()->detach(Role::where('name', "usuario")->first());
-            }
-        
-            return redirect()->route('list_users');
-        }else{
-            $request->session()->flash('status', 'No puede eliminar su propio usuario.');
-            return redirect()->route('list_users');
-        }
-    
     }
 }
