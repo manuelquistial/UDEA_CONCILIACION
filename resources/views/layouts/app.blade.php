@@ -29,7 +29,7 @@
                     Conciliacion - Facultad de Comunicaciones
                 </a>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <!-- Right Side Of Navbar --> 
+                    <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ml-auto">
                         <!-- Authentication Links -->
                         @guest
@@ -39,12 +39,7 @@
                                     <a class="nav-link" href="{{ route('home') }}">{{ __('Conciliar') }}</a>
                                 @show
                             </li>
-                            @if(Auth::user()->hasRole("administrador")) 
-                                <li class="nav-item">
-                                    @section('register')
-                                        <a class="nav-link" href="{{ route('register') }}">{{ __('Registrar') }}</a>
-                                    @show
-                                </li>
+                            @if(Auth::user()->hasOneRole("Administrador"))
                                 <li class="nav-item">
                                     @section('lista_usuarios')
                                         <a class="nav-link" href="{{ route('list_users') }}">{{ __('Lista Usuarios') }}</a>
@@ -55,7 +50,7 @@
                                         <a class="nav-link" href="{{ route('list_porcentajes') }}">{{ __('Porcentajes') }}</a>
                                     @show
                                 </li>
-                            @endif 
+                            @endif
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
                                     {{ Auth::user()->name }} <span class="caret"></span>
