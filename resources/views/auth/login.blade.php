@@ -4,64 +4,44 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">{{ __('Inicio de Sesion') }}</div>
+                <div class="card-header">{{ Lang::get('strings.login.iniciar_sesion') }}</div>
 
                 <div class="card-body">
-                    <form method="POST" action="{{ route('login') }}">
-                        {!! csrf_field() !!}
+                    <form class="form-horizontal" method="POST" action="{{ route('login') }}">
+                        {{ csrf_field() }}
 
-                        <div class="form-group row">
-                            <label for="username" class="col-md-4 col-form-label text-md-right">{{ __('Usuario') }}</label>
+                        <div class="form-group{{ $errors->has('usuario') ? ' has-error' : '' }}">
+                            <label for="usuario" class="control-label">{{ Lang::get('strings.login.usuario') }}</label>
 
-                            <div class="col-md-6">
-                                <input id="username" type="string" class="form-control{{ $errors->has('username') ? ' is-invalid' : '' }}" name="username" value="{{ old('username') }}" required autofocus>
-                               
-                                @if ($errors->has('username'))
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $errors->first('username') }}</strong>
-                                    </span>
-                                @endif
-                            </div>
+                            <input id="usuario" type="string" class="form-control" name="usuario" value="{{ old('usuario') }}" required autofocus>
+
+                            @if ($errors->has('usuario'))
+                                <span class="text-danger">
+                                    <strong><small>{{ $errors->first('usuario') }}</small></strong>
+                                </span>
+                            @endif
                         </div>
 
-                        <div class="form-group row">
-                            <label for="password" class="col-md-4 col-form-label text-md-right">{{ __('Contraseña') }}</label>
+                        <div class="form-group{{ $errors->has('password') ? ' has-error' : '' }}">
+                            <label for="password" class="control-label">{{ Lang::get('strings.login.password') }}</label>
 
-                            <div class="col-md-6">
-                                <input id="password" type="password" class="form-control{{ $errors->has('password') ? ' is-invalid' : '' }}" name="password" required>
+                            <input id="password" type="password" class="form-control" name="password" required>
 
-                                @if ($errors->has('password'))
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $errors->first('password') }}</strong>
-                                    </span>
-                                @endif
-                            </div>
+                            @if ($errors->has('password'))
+                                <span class="text-danger">
+                                    <strong><small>{{ $errors->first('password') }}</small></strong>
+                                </span>
+                            @endif
                         </div>
 
-                        <div class="form-group row">
-                            <div class="col-md-6 offset-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                            {{ Lang::get('strings.login.conectar') }}
+                            </button>
 
-                                    <label class="form-check-label" for="remember">
-                                        {{ __('Recordar Usuario') }}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group row mb-0">
-                            <div class="col-md-8 offset-md-4">
-                                <button type="submit" class="btn btn-primary">
-                                    {{ __('Ingresar') }}
-                                </button>
-
-                                @if (Route::has('password.request'))
-                                    <a class="btn btn-link" href="{{ route('password.request') }}">
-                                        {{ __('¿Has olvidado tu contraseña?') }}
-                                    </a>
-                                @endif
-                            </div>
+                            <a class="btn btn-link" href="{{ route('password.request') }}">
+                            {{ Lang::get('strings.login.olvido_password') }}
+                            </a>
                         </div>
                     </form>
                 </div>

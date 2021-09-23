@@ -21,6 +21,8 @@ class LoginController extends Controller
 
     use AuthenticatesUsers;
 
+    private $enable = 4;
+
     /**
      * Where to redirect users after login.
      *
@@ -38,8 +40,9 @@ class LoginController extends Controller
         $this->middleware('guest')->except('logout');
     }
 
-    public function username(){
-        return 'username';
+    public function usuario()
+    {
+        return 'usuario';
     }
 
     /**
@@ -51,8 +54,9 @@ class LoginController extends Controller
     protected function credentials(Request $request)
     {
         return [
-            $this->username() => $request->get($this->username()),
-            'password' => $request->get('password')
+            $this->usuario() => $request->get($this->usuario()),
+            'password' => $request->get('password'),
+            'estado_id' => $this->enable
         ];
     }
 
@@ -63,9 +67,9 @@ class LoginController extends Controller
      * @return void
      */
     protected function validateLogin(Request $request)
-    {       
+    {
         $this->validate($request, [
-            $this->username() => "required|exists:users,{$this->username()}",
+            $this->usuario() => "required|exists:tr_usuarios,{$this->usuario()}",
             'password' => 'required',
         ]);
     }

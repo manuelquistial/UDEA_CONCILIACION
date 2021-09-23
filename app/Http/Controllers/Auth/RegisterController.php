@@ -40,6 +40,50 @@ class RegisterController extends Controller
      */
     public function __construct(){
         $this->middleware('auth');
+        $this->middleware(['role:administrador']);
+    }
+
+    /**
+     * Get a validator for an incoming registration request.
+     *
+     * @param  array  $data
+     * @return \Illuminate\Contracts\Validation\Validator
+     */
+    protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:20|unique:users',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+    }
+
+    /**
+     * Create a new user instance after a valid registration.
+     *
+     * @param  array  $data
+     * @return \App\User
+     */
+    protected function create(array $data)
+    {
+        $role = "usuario";
+        $user = User::create([
+            'name' => $data['name'],
+            'username' => $data['username'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'token' => str_random(40) . time(),
+        ]);
+        if(!empty($data['admin-role'])){
+            $role = "administrador";
+        }
+
+        $user
+            ->roles()
+            ->attach(Role::where('name', $role)->first());
+
+        return $user;
     }
 
     /**
@@ -49,6 +93,11 @@ class RegisterController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function register(Request $request){
-        return redirect('/');
+        $this->validator($request->all())->validate();
+
+        event(new Registered($user = $this->create($request->all())));
+
+        return redirect()->route('register')
+            ->with(['status' => 'Tu cuenta a sido creada!.']);
     }
 }

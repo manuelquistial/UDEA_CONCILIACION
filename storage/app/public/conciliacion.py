@@ -139,13 +139,13 @@ def uneBancolombia(pago, egreso, colp, cole, rPago, rEgreso):
         egreso.update(rEgreso)
 
 currentPattern = [sys.argv[2],sys.argv[3],sys.argv[4]]
-path = sys.argv[5]+"conciliacion\\"
+path = sys.argv[5]+"conciliacion/"
 porcentaje_salud = round(float(sys.argv[7]),5)
 porcentaje_ingresos = round(float(sys.argv[8]),4)
 dataFrames = {1:'',2:'',3:''}
 
 for item in currentPattern:
-    currentFile = item.split('\\').pop()
+    currentFile = item.split('/').pop()
     if(str(currentFile).lower() == 'general_sigep_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx'):
         dataFrames[1]= pd.read_excel(path+currentFile, encoding="utf-8")
     elif(str(currentFile).lower() == 'pagos_sap_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx'):
