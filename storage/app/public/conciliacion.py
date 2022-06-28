@@ -5,6 +5,8 @@ import xlsxwriter
 import pandas as pd
 import numpy as np
 import sys
+#reload(sys)
+#sys.setdefaultencoding('utf-8')
 
 def fomulaSSValida(original, file, cols):
     for index0, row0 in file.iterrows():

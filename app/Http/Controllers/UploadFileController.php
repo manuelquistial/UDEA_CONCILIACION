@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Auth;
 use File;
 use Illuminate\Support\Facades\DB;
