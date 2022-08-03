@@ -327,16 +327,17 @@ if not ingresos_sigep_dataframe.empty:
             valueR = ccPosgradosC[valueR]
             valueI = ingresos_sigep_dataframe[valueI]
             valueT = abs(valueR[cols[1]]).sum()
-            sumaR = int(round(valueT*porcentaje_ingresos))  #FALTA PORCENTAJE
+            sumaR = valueT*porcentaje_ingresos
             valueProyeIngre += (valueT - sumaR)
             sumaI = int(abs(valueI[colI[1]]).sum())
-            if(sumaR == sumaI):
+            if(int(sumaR) == sumaI):
                 valueR['valida'] = 0
                 valueI['valida'] = 0
                 recaudosSap.update(valueR)
                 ingresos_sigep_dataframe.update(valueI)
 
-        fecha = ingresos_sigep_dataframe[colI[5]]
+        numero_documento_base = 0
+        sumatoria_documento_base = 0
 
         for index, row in ingresoPosPrin.iterrows():
             updRecaudo = ccPosgradosC[cols[0]] == row[colI[0]]
@@ -350,11 +351,23 @@ if not ingresos_sigep_dataframe.empty:
                     ingresos_sigep_dataframe.update(ingresoPosPrin)
                     recaudosSap.update(updRecaudo)
 
-            if int(row[colI[1]]) == valueProyeIngre:
-                ingresoPosPrin.loc[index,'valida'] = 0
-                ingresos_sigep_dataframe.update(ingresoPosPrin)
+                if int(row[colI[1]]) == int(valueProyeIngre):
+                    numero_documento_base = row[colI[0]]
+                    sumatoria_documento_base = sumaR
+                    ingresoPosPrin.loc[index,'valida'] = 0
+                    ingresos_sigep_dataframe.update(ingresoPosPrin)
 
-        ingresos_sigep_dataframe[colI[5]] = fecha
+        if(numero_documento_base != 0 and sumatoria_documento_base != 0):
+            ingreso_documento_base = ingresoPosPrin[colI[0]] == numero_documento_base
+            ingreso_documento_base = ingresoPosPrin[ingreso_documento_base]
+            for index, row in ingreso_documento_base.iterrows():
+                if(int(row[colI[1]]) == sumatoria_documento_base):
+                    updRecaudo = ccPosgradosC[cols[0]] == numero_documento_base
+                    updRecaudo = ccPosgradosC[updRecaudo]
+                    updRecaudo['valida'] = 0
+                    recaudosSap.update(updRecaudo)
+                    ingreso_documento_base.loc[index,'valida'] = 0
+                    ingresos_sigep_dataframe.update(ingreso_documento_base)
 
     colRS = recaudosSap.columns.tolist()
     recaudosSap = recaudosSap.sort_values(by=[colRS[0]])
@@ -795,7 +808,7 @@ totales = {1: 0, 2: 0, 3: 0, 4: 0}
 if not ingresos_sigep_dataframe.empty:
     salarioEps = pd.DataFrame()
 
-if not egresos_sigep_dataframe.empty:
+if ingresos_sigep_dataframe.empty:
     ccPosgrados = pd.DataFrame()
     ccPosgradosPagos = pd.DataFrame()
     posNegRecaudos = pd.DataFrame()
