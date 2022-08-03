@@ -10,6 +10,23 @@ import re
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 
+def ingresos_egresos_sigep(general_sigep_dataframe, colsInicial, tipo):
+    values = general_sigep_dataframe[colsInicial[2]] == tipo
+    values = general_sigep_dataframe[values]
+    mon = pd.DatetimeIndex(values[colsInicial[3]])
+    values['Periodo'] = mon.month
+    cols = values.columns.tolist()
+    cols = [cols[9]] + [cols[7]] + cols[0:4] + [cols[10]] + cols[4:7] + [cols[8]]
+    values = values[cols]
+    ref = values[cols[0]].astype('int64')
+    values.update(ref)
+    values['Formula'] = 0
+    values['Diferencia'] = 0
+    values['Observaciones'] = 0
+    values['valida'] = 0
+    
+    return values
+
 def fomulaSSValida(original, file, cols):
     for index0, row0 in file.iterrows():
         sumaSS = 0
@@ -83,7 +100,7 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         worksheet.write(cont, 11, '=SUMIFS(Recaudos_SAP!B:B,Recaudos_SAP!A:A,Ingresos_SIGEP!A'+str(cont+1)+',Recaudos_SAP!G:G,@Ingresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-ABS(L'+str(cont+1)+')', format)
-        worksheet.write(cont, 5, datetime.strptime(row[col[5]], '%Y-%m-%d %H:%M:%S'), date)
+        worksheet.write(cont, 5, datetime.strptime(str(row[col[5]]), '%Y-%m-%d %H:%M:%S'), date)
     elif(item == 3):
         worksheet.write(cont, len(col)-5, '=SUMIFS(Egresos_SIGEP!B:B,Egresos_SIGEP!A:A,Pagos_SAP!A'+str(cont+1)+',Egresos_SIGEP!G:G,@Pagos_SAP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
@@ -92,9 +109,10 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         worksheet.write(cont, 14, datetime.strptime(row[col[14]], '%Y-%m-%d').date(), date)
         value = 0
         if(str(row[col[12]]).lower()[0:8] == 'docentes') & (str(row[col[4]]).lower()[0:3] == 'men') & ((str(row[col[4]]).lower().strip()[-1] == '1') | (str(row[col[4]]).lower().strip()[-1] == '3')):
-            value = seguridad[row[col[0]]]
-            value = value + ['B'+str(cont+1)]
-            seguridad[row[col[0]]] = value
+            if not seguridad.empty:
+                value = seguridad[row[col[0]]]
+                value = value + ['B'+str(cont+1)]
+                seguridad[row[col[0]]] = value
         
         if(enPos == True):
             if(str(row[col[0]]).lower()[0:4] == '4200'):
@@ -107,7 +125,7 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         worksheet.write(cont, 11, '=SUMIFS(Pagos_SAP!B:B,Pagos_SAP!A:A,Egresos_SIGEP!A'+str(cont+1)+',Pagos_SAP!G:G,@Egresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-L'+str(cont+1), format)
-        worksheet.write(cont, 5, datetime.strptime(row[col[5]], '%Y-%m-%d %H:%M:%S'), date)
+        worksheet.write(cont, 5, datetime.strptime(str(row[col[5]]), '%Y-%m-%d %H:%M:%S'), date)
 
 def totalesSheets(worksheet, shapes, format, item, total, negRecaudos, col, enPos):
     moneyTotalSap = workbook.add_format({'num_format': '#,##', 'fg_color':'#ffff00'})
@@ -147,369 +165,53 @@ def uneBancolombia(pago, egreso, colp, cole, rPago, rEgreso):
         pago.update(rPago)
         egreso.update(rEgreso)
 
-currentPattern = [sys.argv[2],sys.argv[3],sys.argv[4]]
-path = sys.argv[5]+"conciliacion/"
-porcentaje_salud = round(float(sys.argv[7]),5)
-porcentaje_ingresos = round(float(sys.argv[8]),4)
-dataFrames = {1:'',2:'',3:''}
+path = sys.argv[2]+"conciliacion/"
+porcentaje_salud = round(float(sys.argv[4]),5)
+porcentaje_ingresos = round(float(sys.argv[5]),4)
 
-general_sigep = 'general_sigep_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx'
+general_sigep_dataframe = pd.DataFrame()
+pagos_sap_dataframe = pd.DataFrame()
+recaudos_sap_dataframe = pd.DataFrame()
+
+ingresos_sigep_dataframe = pd.DataFrame()
+egresos_sigep_dataframe = pd.DataFrame()
+
+general_sigep = 'general_sigep_'+str(sys.argv[1])+'_'+sys.argv[3]+'.xlsx'
 if exists(path + general_sigep):
-    dataFrames[1] = pd.read_excel(path + general_sigep)
+    general_sigep_dataframe = pd.read_excel(path + general_sigep)
 
-pagos_sap = 'pagos_sap_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx'
+pagos_sap = 'pagos_sap_'+str(sys.argv[1])+'_'+sys.argv[3]+'.xlsx'
 if exists(path + pagos_sap):
-    dataFrames[2] = pd.read_excel(path + pagos_sap).astype(str)
+    pagos_sap_dataframe = pd.read_excel(path + pagos_sap).astype(str)
 
-recaudos_sap = 'recaudos_sap_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx'
+recaudos_sap = 'recaudos_sap_'+str(sys.argv[1])+'_'+sys.argv[3]+'.xlsx'
 if exists(path + recaudos_sap):
-    dataFrames[3] = pd.read_excel(path + recaudos_sap).astype(str)
+    recaudos_sap_dataframe = pd.read_excel(path + recaudos_sap).astype(str)
 
-generalSigep = dataFrames[1]
-colsInicial = generalSigep.columns.tolist()
-pagosSap = dataFrames[2]
-recaudosSap = dataFrames[3]
-stringSigep = generalSigep[colsInicial[9]].apply(lambda s: type(s) == str)
-stringSigep = generalSigep[stringSigep]
-generalSigep.loc[stringSigep.index.tolist(),colsInicial[9]] = 0
-generalSigep = generalSigep.astype(str)
+colsInicial = general_sigep_dataframe.columns.tolist()
+pagosSap = pagos_sap_dataframe
+recaudosSap = recaudos_sap_dataframe
+stringSigep = general_sigep_dataframe[colsInicial[9]].apply(lambda s: type(s) == str)
+stringSigep = general_sigep_dataframe[stringSigep]
+general_sigep_dataframe.loc[stringSigep.index.tolist(),colsInicial[9]] = 0
+general_sigep_dataframe = general_sigep_dataframe.astype(str)
 
 #generalSigep
-generalSigepItems = {1:'',2:''}
-items =  {1:'Ingreso',2:'Egreso'}
-for sigep in generalSigepItems:
-    values = generalSigep[colsInicial[2]] == items[sigep]
-    generalSigepItems[sigep] = generalSigep[values]
-    values = generalSigepItems[sigep]
-    mon = pd.DatetimeIndex(values[colsInicial[3]])
-    values['Periodo'] = mon.month
-    cols = values.columns.tolist()
-    cols = [cols[9]] + [cols[7]] + cols[0:4] + [cols[10]] + cols[4:7] + [cols[8]]
-    values = values[cols]
-    ref = values[cols[0]].astype('int64')
-    values.update(ref)
-    values['Formula'] = 0
-    values['Diferencia'] = 0
-    values['Observaciones'] = 0
-    values['valida'] = 0
-    generalSigepItems[sigep] = values
+ingresos_sigep_dataframe = ingresos_egresos_sigep(general_sigep_dataframe, colsInicial, 'Ingreso')
+egresos_sigep_dataframe = ingresos_egresos_sigep(general_sigep_dataframe, colsInicial, 'Egreso')
 
-colsInicialN = generalSigepItems[1].columns.tolist()
-generalSigepItems[1][colsInicialN[0]] = generalSigepItems[1][colsInicialN[0]].astype(float)
-generalSigepItems[1][colsInicialN[1]] = generalSigepItems[1][colsInicialN[1]].astype(float)
-generalSigepItems[2][colsInicialN[0]] = generalSigepItems[2][colsInicialN[0]].astype(float)
-generalSigepItems[2][colsInicialN[1]] = generalSigepItems[2][colsInicialN[1]].astype(float)
-
-totaDetSap = {1:'', 2:''}
-
-#pagosSap
-cols = pagosSap.columns.tolist()
-cols = [cols[7]] + [cols[5]] + cols[0:5]+ [cols[6]] + cols[8:]
-totaDetSap[1] = float(pagosSap.loc[pagosSap.shape[0]-1,cols[1]])
-pagosSap = pagosSap[cols]
-pagosSap = pagosSap[:-1]
-pagosSap['Formula'] = 0
-pagosSap['Diferencia'] = 0
-pagosSap['SS'] = 0
-pagosSap['Observaciones'] = 0
-pagosSap['valida'] = 0
-
-#recaudosSap
+#Habilita Posgrados
 enablePos = False
-cols = recaudosSap.columns.tolist()
-cols = [cols[6]] + [cols[5]] + cols[0:5] + cols[7:]
-totaDetSap[2] = float(recaudosSap.loc[recaudosSap.shape[0]-1,cols[1]])
-recaudosSap = recaudosSap[cols]
-recaudosSap = recaudosSap[:-1]
-#Posgrados
 if(str(sys.argv[1]) == '21920005'):
     enablePos = True
-    recaudosSap['Total Ingresos'] = 0
-    recaudosSap['% Ingreso Sigep_'+str(porcentaje_ingresos*100)+'%'] = 0
-    recaudosSap['Pendiente registrar en proyecto ingresos_'+str(100-(porcentaje_ingresos*100))+'%'] = 0
-    recaudosSap['Deducciones'] = 0
-recaudosSap['Formula'] = 0
-recaudosSap['Diferencia'] = 0
-recaudosSap['Observaciones'] = 0
-recaudosSap['valida'] = 0
-recaudosSap[cols[0]] = recaudosSap[cols[0]].astype(float)
-recaudosSap[cols[1]] = recaudosSap[cols[1]].astype(float)
-recaudosSap[cols[6]] = recaudosSap[cols[6]].astype(float)
-recaudosSap[cols[6]] = recaudosSap[cols[6]].astype(int)
-
-#pagosSap
-cols = pagosSap.columns.tolist()
-nanValues = pagosSap.apply(lambda s: str(s[cols[0]]).lower() == 'nan', axis=1)
-newPagosSap = pagosSap[nanValues]
-for index, row in newPagosSap.iterrows():
-    val = row[cols[4]]
-    if(val[0:2] == '81') | (val[0:5] == '10000'):
-        newPagosSap.loc[index,cols[0]] = float(row[cols[4]])
-    else:
-        newPagosSap.loc[index,cols[0]] = float(row[cols[2]])
-pagosSap.update(newPagosSap)
-pagosSap[cols[0]] = pagosSap[cols[0]].astype(float)
-pagosSap[cols[1]] = pagosSap[cols[1]].astype(float)
-pagosSap[cols[6]] = pagosSap[cols[6]].astype(float)
-#......pagosSap[cols[6]] = pagosSap[cols[6]].astype(int)
-
-#Formula y diferencia
-valorFormulaDiferencia(generalSigepItems[1], recaudosSap)
-valorFormulaDiferencia(recaudosSap, generalSigepItems[1])
-colGeneralSigep = generalSigepItems[2].columns.tolist()
-# Se filtra por cobrad porque estan escribiendo cobrado o cobrada
-generalSigepSinSSCobrada = generalSigepItems[2].apply(lambda s: str(s[colGeneralSigep[9]]).lower()[0:9] != 'ss cobrad', axis=1)
-generalSigepSinSSCobrada = generalSigepItems[2][generalSigepSinSSCobrada]
-if(generalSigepSinSSCobrada.empty == True):
-    generalSigepSinSSCobrada = generalSigepItems[2]
-    
-valorFormulaDiferencia(generalSigepSinSSCobrada, pagosSap)
-valorFormulaDiferencia(pagosSap, generalSigepSinSSCobrada)
-generalSigepItems[2].update(generalSigepSinSSCobrada)
-
-#Calculos CC 21920005 POSGRADOS
-ccPosgrados = dict()
-ccPosgradosPagos = dict()
-if(enablePos == True):
-    principal = -1
-
-    colI = generalSigepItems[1].columns.tolist()
-    ccPSigep = generalSigepItems[1].apply(lambda s: str(s[colI[0]]).lower()[0:4] == '4200', axis=1)
-    ccPSigep = generalSigepItems[1][ccPSigep]
-    ccPSigepD = ccPSigep[ccPSigep[colI[0]].duplicated() == True]
-    if(~ccPSigepD.empty):
-        if(ccPSigepD.shape[0] == 1):
-            principal = ccPSigepD.iloc[0][colI[0]]
-    ingresoPosPrin = ccPSigep[colI[0]] == principal
-    ingresoPosPrin = ccPSigep[ingresoPosPrin]
-
-    cols = pagosSap.columns.tolist()
-    #5300 no aparecio
-    pagosPosSap = pagosSap.apply(lambda s: (str(s[cols[4]]).lower()[0:4] == '4200') | (str(s[cols[4]]).lower()[0:4] == '5300'), axis=1)
-    pagosPosSapD = pagosSap[pagosPosSap]
-    for index, row in pagosPosSapD.iterrows():
-        pagosPosSapD.loc[index,cols[0]] = int(row[cols[4]])
-    pagosSap.update(pagosPosSapD)
-
-    pagosPosSap = pagosSap.apply(lambda s: str(s[cols[4]]).lower()[0:4] == '4200', axis=1)
-    pagosPosSap = pagosSap[pagosPosSap]
-    totalPosgradosPagos = abs(pagosPosSap[cols[1]]).sum()
-    prinEgre = generalSigepItems[2][colI[0]] == principal
-    prinEgre = generalSigepItems[2][prinEgre]
-    if(~prinEgre.empty):
-        if(prinEgre.shape[0] == 1):
-            if(prinEgre.iloc[0][colI[1]] == totalPosgradosPagos):
-                pagosPosSap['valida'] = 0
-                prinEgre['valida'] = 0
-                generalSigepItems[2].update(prinEgre)
-                pagosSap.update(pagosPosSap)
-
-    cols = recaudosSap.columns.tolist()
-    ccPosgradosC = recaudosSap.apply(lambda s: str(s[cols[0]]).lower()[0:4] == '4200', axis=1)
-    ccPosgradosC = recaudosSap[ccPosgradosC]
-
-    ccPosgradosF = ccPosgradosC[[cols[0]] + [cols[1]]]
-    ccPosgradosF = ccPosgradosF.groupby([cols[0]]).sum()
-    ccPosgradosF = ccPosgradosF.reset_index()
-    ccPosgrados = dict.fromkeys(ccPosgradosF[cols[0]], [])
-    ccPosgradosPagos = dict.fromkeys(ccPosgradosF[cols[0]], [])
-
-    valueProyeIngre = 0
-    for item in ccPosgrados:
-        valueR = ccPosgradosC[cols[0]] == item
-        valueI = generalSigepItems[1][colI[0]] == item
-        valueR = ccPosgradosC[valueR]
-        valueI = generalSigepItems[1][valueI]
-        valueT = abs(valueR[cols[1]]).sum()
-        sumaR = int(round(valueT*porcentaje_ingresos))  #FALTA PORCENTAJE
-        valueProyeIngre += (valueT - sumaR)
-        sumaI = int(abs(valueI[colI[1]]).sum())
-        if(sumaR == sumaI):
-            valueR['valida'] = 0
-            valueI['valida'] = 0
-            recaudosSap.update(valueR)
-            generalSigepItems[1].update(valueI)
-
-    fecha = generalSigepItems[1][colI[5]]
-
-    for index, row in ingresoPosPrin.iterrows():
-        updRecaudo = ccPosgradosC[cols[0]] == row[colI[0]]
-        updRecaudo = ccPosgradosC[updRecaudo]
-        if(updRecaudo.empty == False):
-            valueT = abs(updRecaudo[cols[1]]).sum()
-            sumaR = int(round(valueT*porcentaje_ingresos))
-            if(sumaR == int(float(row[colI[1]]))):
-                updRecaudo['valida'] = 0
-                ingresoPosPrin.loc[index,'valida'] = 0
-                generalSigepItems[1].update(ingresoPosPrin)
-                recaudosSap.update(updRecaudo)
-
-        if int(row[colI[1]]) == valueProyeIngre:
-            ingresoPosPrin.loc[index,'valida'] = 0
-            generalSigepItems[1].update(ingresoPosPrin)
-
-    generalSigepItems[1][colI[5]] = fecha
-
-cols = pagosSap.columns.tolist()
-pagosSap = pagosSap.sort_values(by=[cols[0]])
-colRS = recaudosSap.columns.tolist()
-recaudosSap = recaudosSap.sort_values(by=[colRS[0]])
-
-colP = pagosSap.columns.tolist()
-colE = generalSigepItems[2].columns.tolist()
-
-#UNE EPM PAGOS - EGRESOS
-uneEpm = 'une epm telecomunicaciones'
-uneEpmP = pagosSap.apply(lambda s: uneEpm in str(s[colP[17]]).lower(), axis=1)
-uneEpmP = pagosSap[uneEpmP]
-if(uneEpmP.empty == False):
-    uneEpmE = generalSigepItems[2].apply(lambda s: uneEpm in str(s[colE[8]]).lower(), axis=1)
-    uneEpmE = generalSigepItems[2][uneEpmE]
-    uneBancolombia(pagosSap, generalSigepItems[2], colP, colE, uneEpmP, uneEpmE)
-
-#BANCOLOMBIA PAGOS - EGRESOS
-bancolombiaP = pagosSap.apply(lambda s: 'bancolombia s.a.' in str(s[colP[17]]).lower(), axis=1)
-bancolombiaP = pagosSap[bancolombiaP]
-if(bancolombiaP.empty == False):
-    bancolombiaE = generalSigepItems[2].apply(lambda s: 'gastos bancarios' in str(s[colE[9]]).lower(), axis=1)
-    bancolombiaE = generalSigepItems[2][bancolombiaE]
-    uneBancolombia(pagosSap, generalSigepItems[2], colP, colE, bancolombiaP, bancolombiaE)
-
-#APORTES POR DED CONV
-cols = pagosSap.columns.tolist()
-aportesPDC = pagosSap.apply(lambda s: str(s[cols[12]]).lower() == 'aportes por ded conv', axis=1)
-aportesPDC = pagosSap[aportesPDC]
-if(aportesPDC.empty == False):
-    aportesPDCValue = aportesPDC.iloc[0][cols[0]]
-    aportes = generalSigepItems[2][colE[0]] == aportesPDCValue
-    aportes = generalSigepItems[2][aportes]
-    if(aportes.empty == False):
-        aportesPDCSum = aportesPDC[cols[1]].sum()
-        if(int(aportesPDCSum) == int(float(aportes.iloc[0][colE[1]]))):
-            aportes['valida'] = 0
-            aportesPDC['valida'] = 0
-            generalSigepItems[2].update(aportes)
-            pagosSap.update(aportesPDC)
-
-#Calculo seguridad
-# MEN022022-3-1 or MEN022022-3-3, termina en 1 o 3
-cols = pagosSap.columns.tolist()
-salario = pagosSap.apply(lambda s: (str(s[cols[12]]).lower()[0:8] == 'docentes') & (str(s[cols[4]]).lower()[0:3] == 'men') & ((str(s[cols[4]]).lower().strip()[-1] == '1') | (str(s[cols[4]]).lower().strip()[-1] == '3')), axis=1)
-newPagosSap = pagosSap[salario]
-salarioEps = newPagosSap[[cols[0]] + [cols[1]]]
-salarioEps = salarioEps.groupby([cols[0]]).sum()
-salarioEps = salarioEps.reset_index()
-salarioEps = dict.fromkeys(salarioEps[cols[0]], [])
-
-fomulaSSValida(pagosSap, newPagosSap, cols)
-pagosSap.update(newPagosSap)
-
-colE = generalSigepItems[2].columns.tolist()
-for item in salarioEps:
-    pago = pagosSap[cols[0]] == item
-    pago = pagosSap[pago]
-    egreso = generalSigepItems[2][colE[0]] == item
-    egreso = generalSigepItems[2][egreso]
-    if(pago.shape[0] == 1):
-        unsoloMEN = pago.apply(lambda s: (str(s[cols[12]]).lower()[0:8] == 'docentes') & (str(s[cols[4]]).lower()[0:3] == 'men') & ((str(s[cols[4]]).lower().strip()[-1] == '1') | (str(s[cols[4]]).lower().strip()[-1] == '3')), axis=1)
-        unsoloMEN = pago[unsoloMEN]
-        if(unsoloMEN.empty == False):
-            if(unsoloMEN.iloc[0][cols[1]] == egreso.iloc[0][colE[1]]):
-                pago['valida'] = 0
-                egreso['valida'] = 0
-                pagosSap.update(pago)
-
-    suma = abs(pago['valida']).sum()
-    egreso['valida'] = suma
-    generalSigepItems[2].update(egreso)
-
-#GIROS
-regex_all_giros_zims = r'zims\s[0-9]+.*'
-regex_index_giros_zims = r'zims\s[0-9]+$'
-giros = pagosSap.apply(lambda x: len(re.findall(regex_all_giros_zims, str(x[cols[4]]).lower())) != 0, axis=1)
-giros = pagosSap[giros]
-if(giros.empty == False):
-    giros_index = giros.apply(lambda x: len(re.findall(regex_index_giros_zims, str(x[cols[4]]).lower())) != 0, axis=1)
-    giros_index = giros[giros_index]
-    for index, giros_row in giros_index.iterrows():
-
-        giros_sigep = generalSigepItems[2][colE[0]] == giros_row[cols[0]]
-        giros_sigep = generalSigepItems[2][giros_sigep]
-        giros_sigep_total = abs(giros_sigep[colE[1]]).sum()
-
-        giros_retefuente = giros.apply(lambda x: len(re.findall(rf'{str(giros_row[cols[4]]).lower()}\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
-        giros_retefuente = giros[giros_retefuente]
-
-        giros_retefuente_valor = 0
-        if(giros_retefuente.empty == False):
-            giros_retefuente_valor = abs(giros_retefuente[cols[1]]).sum()
-
-        giros_sap_total = int(giros_retefuente.iloc[0][cols[1]]) + giros_retefuente_valor
-
-        if(int(giros_sigep_total) == giros_sap_total):
-            giros_retefuente['valida'] = 0
-            giros_index.loc[index,'valida'] = 0
-            giros_sigep['valida'] = 0
-            pagosSap.update(giros_retefuente)
-            pagosSap.update(giros_index)
-            generalSigepItems[2].update(giros_sigep)
-
-#seguridad
-colP = pagosSap.columns.tolist()
-colR = generalSigepItems[2].columns.tolist()
-ssSap = pagosSap.apply(lambda s: str(s[colP[4]]).lower()[0:6] == 'automn', axis=1)
-ssSigep = generalSigepItems[2].apply(lambda s: str(s[colR[9]]).lower()[0:2] == 'ss', axis=1)
-ssSap = pagosSap[ssSap]
-ssSigep = generalSigepItems[2][ssSigep]
 
 ''' TITULOS SIGEP '''
 titulosSigep=['Número de Soporte','Valor','Proyecto','Codigo','Tipo','Fecha','Periodo','Referencia','Nit/Cédula','Observación','Tipo de Soporte',' Formula','Diferencia','Observaciones','valida']
-generalSigepItems[1].columns = titulosSigep
-generalSigepItems[2].columns = titulosSigep
-ssSigep.columns = titulosSigep
 
-cols = recaudosSap.columns.tolist()
-ingreso = generalSigepItems[1]
-egreso = generalSigepItems[2]
-seguridadSap = ssSap
-seguridadSigep = ssSigep
-pagos = pagosSap
-recaudos = recaudosSap
-
-positivosRecaudos = recaudos.apply(lambda s: float(s[cols[1]]) > 0, axis=1)
-positivosRecaudos = recaudos[positivosRecaudos]
-
-recaudosValidar = recaudos.apply(lambda s: (s['valida'] != 0) & (float(s[cols[1]]) <= 0), axis=1)
-recaudosValidar = recaudos[recaudosValidar]
-cols = recaudosValidar.columns.tolist()
-recaudosValidar = recaudosValidar[[cols[0]]+ [cols[1]]]
-recaudosValidar = recaudosValidar.groupby([cols[0]]).sum()
-recaudosValidar = recaudosValidar.reset_index()
-
-ingresosValidar = ingreso.apply(lambda s: (s['valida'] != 0), axis=1)
-ingresosValidar = ingreso[ingresosValidar]
-colsI = ingresosValidar.columns.tolist()
-ingresosValidar = ingresosValidar[[colsI[0]]+ [colsI[1]]]
-ingresosValidar = ingresosValidar.groupby([colsI[0]]).sum()
-ingresosValidar = ingresosValidar.reset_index()
-#& (s['Diferencia'] != 0)
-pagosValidar = pagos.apply(lambda s: (s['valida'] != 0) & (str(s[cols[4]]).lower()[0:6] != 'automn'), axis=1)
-pagosValidar = pagos[pagosValidar]
-cols = pagosValidar.columns.tolist()
-pagosValidar = pagosValidar[[cols[0]]+ [cols[1]]]
-pagosValidar = pagosValidar.groupby([cols[0]]).sum()
-pagosValidar = pagosValidar.reset_index()
-'''aqui'''
-colE = egreso.columns.tolist()
-egresoValidar = egreso.apply(lambda s: (s['valida'] != 0) & (str(s[colE[9]]).lower()[0:2] != 'ss'), axis=1)
-egresoValidar = egreso[egresoValidar]
-cols = egresoValidar.columns.tolist()
-egresoValidar = egresoValidar[[cols[0]]+ [cols[1]]]
-egresoValidar = egresoValidar.groupby([cols[0]]).sum()
-egresoValidar = egresoValidar.reset_index()
+totaDetSap = {1:'', 2:''}
 
 ''' SE CREA EL ARCHIVO DE EXCEL'''
-writer = pd.ExcelWriter(sys.argv[5]+'files_out/Centro_de_Costos_'+str(sys.argv[1])+'_'+sys.argv[6]+'.xlsx', 
+writer = pd.ExcelWriter(sys.argv[2]+'files_out/Centro_de_Costos_'+str(sys.argv[1])+'_'+sys.argv[3]+'.xlsx', 
                         engine='xlsxwriter', 
                         options={'nan_inf_to_errors': True})
 
@@ -517,32 +219,6 @@ sheets = {1:'Recaudos_SAP',2:'Ingresos_SIGEP',3:'Pagos_SAP',4:'Egresos_SIGEP'}
 
 #Se crea conciliacion de recaudos
 pd.DataFrame().to_excel(writer, sheet_name='Conciliación', index=False)
-
-recaudosV = recaudos.drop('valida', 1)
-recaudosV.to_excel(writer, index=False, sheet_name=sheets[1])
-
-ingresoV = ingreso.drop('valida', 1)
-ingresoVAjuste = ingresoV[colE[0]].apply(lambda s: s == 0)
-ingresoVAjuste = ingresoV[ingresoVAjuste]
-ingresoAjuste = stringSigep[colsInicial[2]] == 'Ingreso'
-ingresoAjuste = stringSigep[ingresoAjuste]
-ingresoVAjuste.loc[:,colE[0]] = ingresoAjuste[colsInicial[9]]
-ingresoV.update(ingresoVAjuste)
-ingresoV.to_excel(writer, index=False, sheet_name=sheets[2])
-
-#pagosV = pagos.drop('valida', 1)
-pagosV = pagos
-pagosV.to_excel(writer, index=False, sheet_name=sheets[3])
-
-#egresoV = egreso.drop('valida', 1)
-egresoV = egreso
-egresoVAjuste = egresoV[colE[0]].apply(lambda s: s == 0)
-egresoVAjuste = egresoV[egresoVAjuste]
-egresoAjuste = stringSigep[colsInicial[2]] == 'Egreso'
-egresoAjuste = stringSigep[egresoAjuste]
-egresoVAjuste.loc[:,colE[0]] = egresoAjuste[colsInicial[9]]
-egresoV.update(egresoVAjuste)
-egresoV.to_excel(writer, index=False, sheet_name=sheets[4])
 
 ''' ESTILOS '''
 workbook = writer.book
@@ -576,155 +252,530 @@ date = workbook.add_format({'num_format': 'mm/dd/yyyy'})
 worksheet = writer.sheets['Conciliación']
 worksheet.set_column('A:E', cell_size, None)
 worksheet.merge_range('A1:E2', 'CONCILIACIÓN CENTRO DE COSTOS '+str(sys.argv[1]), merge_format)
+
+cont = 5
+cont_recaudos_ingresos = 0
+pV = 1
+
+#ESTILO DE RECAUDOS - INGRESOS- PAGOS - EGRESOS
+dataFrames = {1: pd.DataFrame(), 2: pd.DataFrame(), 3: pd.DataFrame(), 4: pd.DataFrame()}
+
+pagosValidar = pd.DataFrame()
+shapeSIGEP = []
+shapeSAP = []
+
+if not ingresos_sigep_dataframe.empty:
+    colsInicialN = ingresos_sigep_dataframe.columns.tolist()
+    ingresos_sigep_dataframe[colsInicialN[0]] = ingresos_sigep_dataframe[colsInicialN[0]].astype(float)
+    ingresos_sigep_dataframe[colsInicialN[1]] = ingresos_sigep_dataframe[colsInicialN[1]].astype(float)
+
+    #recaudosSap
+    cols = recaudosSap.columns.tolist()
+    cols = [cols[6]] + [cols[5]] + cols[0:5] + cols[7:]
+    totaDetSap[2] = float(recaudosSap.loc[recaudosSap.shape[0]-1,cols[1]])
+    recaudosSap = recaudosSap[cols]
+    recaudosSap = recaudosSap[:-1]
+    #Posgrados
+    if(enablePos == True):
+        recaudosSap['Total Ingresos'] = 0
+        recaudosSap['% Ingreso Sigep_'+str(porcentaje_ingresos*100)+'%'] = 0
+        recaudosSap['Pendiente registrar en proyecto ingresos_'+str(100-(porcentaje_ingresos*100))+'%'] = 0
+        recaudosSap['Deducciones'] = 0
+    recaudosSap['Formula'] = 0
+    recaudosSap['Diferencia'] = 0
+    recaudosSap['Observaciones'] = 0
+    recaudosSap['valida'] = 0
+    recaudosSap[cols[0]] = recaudosSap[cols[0]].astype(float)
+    recaudosSap[cols[1]] = recaudosSap[cols[1]].astype(float)
+    recaudosSap[cols[6]] = recaudosSap[cols[6]].astype(float)
+    recaudosSap[cols[6]] = recaudosSap[cols[6]].astype(int)
+
+    #Formula y diferencia
+    valorFormulaDiferencia(ingresos_sigep_dataframe, recaudosSap)
+    valorFormulaDiferencia(recaudosSap, ingresos_sigep_dataframe)
+
+    #Calculos CC 21920005 POSGRADOS
+    ccPosgrados = dict()
+    ccPosgradosPagos = dict()
+    if(enablePos == True):
+        principal = -1
+
+        colI = ingresos_sigep_dataframe.columns.tolist()
+        ccPSigep = ingresos_sigep_dataframe.apply(lambda s: str(s[colI[0]]).lower()[0:4] == '4200', axis=1)
+        ccPSigep = ingresos_sigep_dataframe[ccPSigep]
+        ccPSigepD = ccPSigep[ccPSigep[colI[0]].duplicated() == True]
+        if(~ccPSigepD.empty):
+            if(ccPSigepD.shape[0] == 1):
+                principal = ccPSigepD.iloc[0][colI[0]]
+        ingresoPosPrin = ccPSigep[colI[0]] == principal
+        ingresoPosPrin = ccPSigep[ingresoPosPrin]
+
+        cols = recaudosSap.columns.tolist()
+        ccPosgradosC = recaudosSap.apply(lambda s: str(s[cols[0]]).lower()[0:4] == '4200', axis=1)
+        ccPosgradosC = recaudosSap[ccPosgradosC]
+
+        ccPosgradosF = ccPosgradosC[[cols[0]] + [cols[1]]]
+        ccPosgradosF = ccPosgradosF.groupby([cols[0]]).sum()
+        ccPosgradosF = ccPosgradosF.reset_index()
+        ccPosgrados = dict.fromkeys(ccPosgradosF[cols[0]], [])
+        ccPosgradosPagos = dict.fromkeys(ccPosgradosF[cols[0]], [])
+
+        valueProyeIngre = 0
+        for item in ccPosgrados:
+            valueR = ccPosgradosC[cols[0]] == item
+            valueI = ingresos_sigep_dataframe[colI[0]] == item
+            valueR = ccPosgradosC[valueR]
+            valueI = ingresos_sigep_dataframe[valueI]
+            valueT = abs(valueR[cols[1]]).sum()
+            sumaR = int(round(valueT*porcentaje_ingresos))  #FALTA PORCENTAJE
+            valueProyeIngre += (valueT - sumaR)
+            sumaI = int(abs(valueI[colI[1]]).sum())
+            if(sumaR == sumaI):
+                valueR['valida'] = 0
+                valueI['valida'] = 0
+                recaudosSap.update(valueR)
+                ingresos_sigep_dataframe.update(valueI)
+
+        fecha = ingresos_sigep_dataframe[colI[5]]
+
+        for index, row in ingresoPosPrin.iterrows():
+            updRecaudo = ccPosgradosC[cols[0]] == row[colI[0]]
+            updRecaudo = ccPosgradosC[updRecaudo]
+            if(updRecaudo.empty == False):
+                valueT = abs(updRecaudo[cols[1]]).sum()
+                sumaR = int(round(valueT*porcentaje_ingresos))
+                if(sumaR == int(float(row[colI[1]]))):
+                    updRecaudo['valida'] = 0
+                    ingresoPosPrin.loc[index,'valida'] = 0
+                    ingresos_sigep_dataframe.update(ingresoPosPrin)
+                    recaudosSap.update(updRecaudo)
+
+            if int(row[colI[1]]) == valueProyeIngre:
+                ingresoPosPrin.loc[index,'valida'] = 0
+                ingresos_sigep_dataframe.update(ingresoPosPrin)
+
+        ingresos_sigep_dataframe[colI[5]] = fecha
+
+    colRS = recaudosSap.columns.tolist()
+    recaudosSap = recaudosSap.sort_values(by=[colRS[0]])
+
+    ingresos_sigep_dataframe.columns = titulosSigep
+
+    cols = recaudosSap.columns.tolist()
+    ingreso = ingresos_sigep_dataframe
+
+    recaudos = recaudosSap
+
+    positivosRecaudos = recaudos.apply(lambda s: float(s[cols[1]]) > 0, axis=1)
+    positivosRecaudos = recaudos[positivosRecaudos]
+
+    recaudosValidar = recaudos.apply(lambda s: (s['valida'] != 0) & (float(s[cols[1]]) <= 0), axis=1)
+    recaudosValidar = recaudos[recaudosValidar]
+    cols = recaudosValidar.columns.tolist()
+    recaudosValidar = recaudosValidar[[cols[0]]+ [cols[1]]]
+    recaudosValidar = recaudosValidar.groupby([cols[0]]).sum()
+    recaudosValidar = recaudosValidar.reset_index()
+
+    ingresosValidar = ingreso.apply(lambda s: (s['valida'] != 0), axis=1)
+    ingresosValidar = ingreso[ingresosValidar]
+    colsI = ingresosValidar.columns.tolist()
+    ingresosValidar = ingresosValidar[[colsI[0]]+ [colsI[1]]]
+    ingresosValidar = ingresosValidar.groupby([colsI[0]]).sum()
+    ingresosValidar = ingresosValidar.reset_index()
+
+    recaudosV = recaudos.drop('valida', 1)
+    recaudosV.to_excel(writer, index=False, sheet_name=sheets[1])
+
+    colE = ingreso.columns.tolist()
+    ingresoV = ingreso.drop('valida', 1)
+    ingresoVAjuste = ingresoV[colE[0]].apply(lambda s: s == 0)
+    ingresoVAjuste = ingresoV[ingresoVAjuste]
+    ingresoAjuste = stringSigep[colsInicial[2]] == 'Ingreso'
+    ingresoAjuste = stringSigep[ingresoAjuste]
+    ingresoVAjuste.loc[:,colE[0]] = ingresoAjuste[colsInicial[9]]
+    ingresoV.update(ingresoVAjuste)
+    ingresoV.to_excel(writer, index=False, sheet_name=sheets[2])
+
+    cols = positivosRecaudos.columns.tolist()
+    shapePositivos = positivosRecaudos.shape
+
+    for index, row in positivosRecaudos.iterrows():
+        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), 'Menos ingreso '+str(int(row[cols[0]]))+' (en positivo no se registra)', merge_center)
+        worksheet.write(cont, 3, row[cols[1]], money)
+        cont = cont + 1
+
+    cols = recaudosValidar.columns.tolist()
+    shapeRecaudosV = recaudosValidar.shape
+    cont = shapePositivos[0] + 5
+    for index, row in recaudosValidar.iterrows():
+        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
+        worksheet.write(cont, 4, abs(row[cols[1]]), money)
+        cont = cont + 1
+
+    if(positivosRecaudos.empty):
+        inicial = 6
+    else:
+        inicial = 5
+
+    cols = ingresosValidar.columns.tolist()
+    shapeIngresoV = ingresosValidar.shape
+    cont = shapePositivos[0] + shapeRecaudosV[0] + 5
+    for index, row in ingresosValidar.iterrows():
+        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
+        if(row[cols[0]] == 0):
+            worksheet.write(cont, 0, 'Ajustes', merge_center)
+        worksheet.write(cont, 4, abs(row[cols[1]]), money)
+        cont = cont + 1
+
+    cont_recaudos_ingresos = shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]
+
+    worksheet.write(cont_recaudos_ingresos+6, 3, '=D5-SUM(D6:D'+str(shapePositivos[0]+inicial)+')', money)
+    worksheet.write(cont_recaudos_ingresos+6, 4, '=SUM(E5:E'+str(shapePositivos[0]+shapeRecaudosV[0]+5)+')-SUM(E'+str(shapePositivos[0]+shapeRecaudosV[0]+6)+':E'+str(cont_recaudos_ingresos+inicial)+')', money)
+    worksheet.write(cont_recaudos_ingresos+7, 4, '=D'+str(cont_recaudos_ingresos+7)+'-E'+str(cont_recaudos_ingresos+7), bold_money)
+
+    dataFrames[1] = recaudos
+    dataFrames[2] = ingreso
+
+if not egresos_sigep_dataframe.empty:
+    colsInicialN = egresos_sigep_dataframe.columns.tolist()
+    egresos_sigep_dataframe[colsInicialN[0]] = egresos_sigep_dataframe[colsInicialN[0]].astype(float)
+    egresos_sigep_dataframe[colsInicialN[1]] = egresos_sigep_dataframe[colsInicialN[1]].astype(float)
+
+    #pagosSap
+    cols = pagosSap.columns.tolist()
+    cols = [cols[7]] + [cols[5]] + cols[0:5]+ [cols[6]] + cols[8:]
+    totaDetSap[1] = float(pagosSap.loc[pagosSap.shape[0]-1,cols[1]])
+    pagosSap = pagosSap[cols]
+    pagosSap = pagosSap[:-1]
+    pagosSap['Formula'] = 0
+    pagosSap['Diferencia'] = 0
+    pagosSap['SS'] = 0
+    pagosSap['Observaciones'] = 0
+    pagosSap['valida'] = 0
+
+    #pagosSap
+    cols = pagosSap.columns.tolist()
+    nanValues = pagosSap.apply(lambda s: str(s[cols[0]]).lower() == 'nan', axis=1)
+    newPagosSap = pagosSap[nanValues]
+    for index, row in newPagosSap.iterrows():
+        val = row[cols[4]]
+        if(val[0:2] == '81') | (val[0:5] == '10000'):
+            newPagosSap.loc[index,cols[0]] = float(row[cols[4]])
+        else:
+            newPagosSap.loc[index,cols[0]] = float(row[cols[2]])
+    pagosSap.update(newPagosSap)
+    pagosSap[cols[0]] = pagosSap[cols[0]].astype(float)
+    pagosSap[cols[1]] = pagosSap[cols[1]].astype(float)
+    pagosSap[cols[6]] = pagosSap[cols[6]].astype(float)
+
+
+    colGeneralSigep = egresos_sigep_dataframe.columns.tolist()
+    # Se filtra por cobrad porque estan escribiendo cobrado o cobrada
+    generalSigepSinSSCobrada = egresos_sigep_dataframe.apply(lambda s: str(s[colGeneralSigep[9]]).lower()[0:9] != 'ss cobrad', axis=1)
+    generalSigepSinSSCobrada = egresos_sigep_dataframe[generalSigepSinSSCobrada]
+    if(generalSigepSinSSCobrada.empty == True):
+        generalSigepSinSSCobrada = egresos_sigep_dataframe
+        
+    valorFormulaDiferencia(generalSigepSinSSCobrada, pagosSap)
+    valorFormulaDiferencia(pagosSap, generalSigepSinSSCobrada)
+    egresos_sigep_dataframe.update(generalSigepSinSSCobrada)
+
+    if(enablePos == True):
+        cols = pagosSap.columns.tolist()
+        #5300 no aparecio
+        pagosPosSap = pagosSap.apply(lambda s: (str(s[cols[4]]).lower()[0:4] == '4200') | (str(s[cols[4]]).lower()[0:4] == '5300'), axis=1)
+        pagosPosSapD = pagosSap[pagosPosSap]
+        for index, row in pagosPosSapD.iterrows():
+            pagosPosSapD.loc[index,cols[0]] = int(row[cols[4]])
+        pagosSap.update(pagosPosSapD)
+
+        pagosPosSap = pagosSap.apply(lambda s: str(s[cols[4]]).lower()[0:4] == '4200', axis=1)
+        pagosPosSap = pagosSap[pagosPosSap]
+        totalPosgradosPagos = abs(pagosPosSap[cols[1]]).sum()
+        prinEgre = egresos_sigep_dataframe[colI[0]] == principal
+        prinEgre = egresos_sigep_dataframe[prinEgre]
+        if(~prinEgre.empty):
+            if(prinEgre.shape[0] == 1):
+                if(prinEgre.iloc[0][colI[1]] == totalPosgradosPagos):
+                    pagosPosSap['valida'] = 0
+                    prinEgre['valida'] = 0
+                    egresos_sigep_dataframe.update(prinEgre)
+                    pagosSap.update(pagosPosSap)
+
+
+        cols = pagosSap.columns.tolist()
+        pagosSap = pagosSap.sort_values(by=[cols[0]])
+
+
+    colP = pagosSap.columns.tolist()
+    colE = egresos_sigep_dataframe.columns.tolist()
+
+    #UNE EPM PAGOS - EGRESOS
+    uneEpm = 'une epm telecomunicaciones'
+    uneEpmP = pagosSap.apply(lambda s: uneEpm in str(s[colP[17]]).lower(), axis=1)
+    uneEpmP = pagosSap[uneEpmP]
+    if(uneEpmP.empty == False):
+        uneEpmE = egresos_sigep_dataframe.apply(lambda s: uneEpm in str(s[colE[8]]).lower(), axis=1)
+        uneEpmE = egresos_sigep_dataframe[uneEpmE]
+        uneBancolombia(pagosSap, egresos_sigep_dataframe, colP, colE, uneEpmP, uneEpmE)
+
+    #BANCOLOMBIA PAGOS - EGRESOS
+    bancolombiaP = pagosSap.apply(lambda s: 'bancolombia s.a.' in str(s[colP[17]]).lower(), axis=1)
+    bancolombiaP = pagosSap[bancolombiaP]
+    if(bancolombiaP.empty == False):
+        bancolombiaE = egresos_sigep_dataframe.apply(lambda s: 'gastos bancarios' in str(s[colE[9]]).lower(), axis=1)
+        bancolombiaE = egresos_sigep_dataframe[bancolombiaE]
+        uneBancolombia(pagosSap, egresos_sigep_dataframe, colP, colE, bancolombiaP, bancolombiaE)
+
+    #APORTES POR DED CONV
+    cols = pagosSap.columns.tolist()
+    aportesPDC = pagosSap.apply(lambda s: str(s[cols[12]]).lower() == 'aportes por ded conv', axis=1)
+    aportesPDC = pagosSap[aportesPDC]
+    if(aportesPDC.empty == False):
+        aportesPDCValue = aportesPDC.iloc[0][cols[0]]
+        aportes = egresos_sigep_dataframe[colE[0]] == aportesPDCValue
+        aportes = egresos_sigep_dataframe[aportes]
+        if(aportes.empty == False):
+            aportesPDCSum = aportesPDC[cols[1]].sum()
+            if(int(aportesPDCSum) == int(float(aportes.iloc[0][colE[1]]))):
+                aportes['valida'] = 0
+                aportesPDC['valida'] = 0
+                egresos_sigep_dataframe.update(aportes)
+                pagosSap.update(aportesPDC)
+
+    #Calculo seguridad
+    # MEN022022-3-1 or MEN022022-3-3, termina en 1 o 3
+    cols = pagosSap.columns.tolist()
+    salario = pagosSap.apply(lambda s: (str(s[cols[12]]).lower()[0:8] == 'docentes') & (str(s[cols[4]]).lower()[0:3] == 'men') & ((str(s[cols[4]]).lower().strip()[-1] == '1') | (str(s[cols[4]]).lower().strip()[-1] == '3')), axis=1)
+    newPagosSap = pagosSap[salario]
+    salarioEps = newPagosSap[[cols[0]] + [cols[1]]]
+    salarioEps = salarioEps.groupby([cols[0]]).sum()
+    salarioEps = salarioEps.reset_index()
+    salarioEps = dict.fromkeys(salarioEps[cols[0]], [])
+
+    fomulaSSValida(pagosSap, newPagosSap, cols)
+    pagosSap.update(newPagosSap)
+
+    colE = egresos_sigep_dataframe.columns.tolist()
+    for item in salarioEps:
+        pago = pagosSap[cols[0]] == item
+        pago = pagosSap[pago]
+        egreso = egresos_sigep_dataframe[colE[0]] == item
+        egreso = egresos_sigep_dataframe[egreso]
+        if(pago.shape[0] == 1):
+            unsoloMEN = pago.apply(lambda s: (str(s[cols[12]]).lower()[0:8] == 'docentes') & (str(s[cols[4]]).lower()[0:3] == 'men') & ((str(s[cols[4]]).lower().strip()[-1] == '1') | (str(s[cols[4]]).lower().strip()[-1] == '3')), axis=1)
+            unsoloMEN = pago[unsoloMEN]
+            if(unsoloMEN.empty == False):
+                if(unsoloMEN.iloc[0][cols[1]] == egreso.iloc[0][colE[1]]):
+                    pago['valida'] = 0
+                    egreso['valida'] = 0
+                    pagosSap.update(pago)
+
+        suma = abs(pago['valida']).sum()
+        egreso['valida'] = suma
+        egresos_sigep_dataframe.update(egreso)
+
+    #GIROS
+    regex_all_giros_zims = r'zims\s[0-9]+.*'
+    regex_index_giros_zims = r'zims\s[0-9]+$'
+    giros = pagosSap.apply(lambda x: len(re.findall(regex_all_giros_zims, str(x[cols[4]]).lower())) != 0, axis=1)
+    giros = pagosSap[giros]
+    if(giros.empty == False):
+        giros_index = giros.apply(lambda x: len(re.findall(regex_index_giros_zims, str(x[cols[4]]).lower())) != 0, axis=1)
+        giros_index = giros[giros_index]
+        for index, giros_row in giros_index.iterrows():
+
+            giros_sigep = egresos_sigep_dataframe[colE[0]] == giros_row[cols[0]]
+            giros_sigep = egresos_sigep_dataframe[giros_sigep]
+            giros_sigep_total = abs(giros_sigep[colE[1]]).sum()
+
+            giros_retefuente = giros.apply(lambda x: len(re.findall(rf'{str(giros_row[cols[4]]).lower()}\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
+            giros_retefuente = giros[giros_retefuente]
+
+            giros_retefuente_valor = 0
+            if(giros_retefuente.empty == False):
+                giros_retefuente_valor = abs(giros_retefuente[cols[1]]).sum()
+
+            giros_sap_total = giros_retefuente_valor + giros_row[cols[1]]
+
+            if(int(giros_sigep_total) == giros_sap_total):
+                giros_retefuente['valida'] = 0
+                giros_index.loc[index,'valida'] = 0
+                giros_sigep['valida'] = 0
+                pagosSap.update(giros_retefuente)
+                pagosSap.update(giros_index)
+                egresos_sigep_dataframe.update(giros_sigep)
+
+    #seguridad
+    colP = pagosSap.columns.tolist()
+    colR = egresos_sigep_dataframe.columns.tolist()
+    ssSap = pagosSap.apply(lambda s: str(s[colP[4]]).lower()[0:6] == 'automn', axis=1)
+    ssSigep = egresos_sigep_dataframe.apply(lambda s: str(s[colR[9]]).lower()[0:2] == 'ss', axis=1)
+    ssSap = pagosSap[ssSap]
+    ssSigep = egresos_sigep_dataframe[ssSigep]
+
+    egresos_sigep_dataframe.columns = titulosSigep
+
+    ssSigep.columns = titulosSigep
+
+    egreso = egresos_sigep_dataframe
+    seguridadSap = ssSap
+    seguridadSigep = ssSigep
+    pagos = pagosSap
+
+    pagosValidar = pagos.apply(lambda s: (s['valida'] != 0) & (str(s[cols[4]]).lower()[0:6] != 'automn'), axis=1)
+    pagosValidar = pagos[pagosValidar]
+    cols = pagosValidar.columns.tolist()
+    pagosValidar = pagosValidar[[cols[0]]+ [cols[1]]]
+    pagosValidar = pagosValidar.groupby([cols[0]]).sum()
+    pagosValidar = pagosValidar.reset_index()
+
+    colE = egreso.columns.tolist()
+    egresoValidar = egreso.apply(lambda s: (s['valida'] != 0) & (str(s[colE[9]]).lower()[0:2] != 'ss'), axis=1)
+    egresoValidar = egreso[egresoValidar]
+    cols = egresoValidar.columns.tolist()
+    egresoValidar = egresoValidar[[cols[0]]+ [cols[1]]]
+    egresoValidar = egresoValidar.groupby([cols[0]]).sum()
+    egresoValidar = egresoValidar.reset_index()
+
+    pagosV = pagos.drop('valida', 1)
+    pagosV = pagos
+    pagosV.to_excel(writer, index=False, sheet_name=sheets[3])
+
+    egresoV = egreso.drop('valida', 1)
+    egresoVAjuste = egresoV[colE[0]].apply(lambda s: s == 0)
+    egresoVAjuste = egresoV[egresoVAjuste]
+    egresoAjuste = stringSigep[colsInicial[2]] == 'Egreso'
+    egresoAjuste = stringSigep[egresoAjuste]
+    egresoVAjuste.loc[:,colE[0]] = egresoAjuste[colsInicial[9]]
+    egresoV.update(egresoVAjuste)
+    egresoV.to_excel(writer, index=False, sheet_name=sheets[4])
+
+    ''' HOJA DE SEGURIDAD SOCIAL SS '''
+    cols = seguridadSap.columns.tolist()
+    cols = [cols[0]] + [cols[1]] + cols[4:7] + [cols[9]] + cols[20:22]
+    seguridadSap = seguridadSap[cols]
+    shapeSAP = seguridadSap.shape
+    seguridadSap.to_excel(writer, sheet_name='SS', startrow=1, header=False, index=False)
+
+    if(seguridadSap.empty):
+        ssSS = 1
+    else:
+        ssSS = 2
+
+    worksheet_ss = writer.sheets['SS']
+    worksheet_ss.write(shapeSAP[0]+1, 1, '=SUM(B'+str(ssSS)+':B'+str(shapeSAP[0]+1)+')', bold_money)
+    worksheet_ss.write(0, 0, 'SS SAP', bold)
+    worksheet_ss.set_column('A:AB', cell_size, None)
+    worksheet_ss.set_column('B:B', None, money)
+
+    contSS = 1
+    for index, row in seguridadSap.iterrows():
+        worksheet_ss.write(contSS, 3, datetime.strptime(row[cols[3]], '%Y-%m-%d').date(), date)
+        contSS += 1 
+
+    cols = seguridadSigep.columns.tolist()
+    seguridadSigep = seguridadSigep[cols[0:11]]
+    shapeSIGEP = seguridadSigep.shape
+
+    seguridadSigep.to_excel(writer, sheet_name='SS', startrow=shapeSAP[0]+5, header=False, index=False)
+
+    contSS = contSS + 4
+    for index, row in seguridadSigep.iterrows():
+        worksheet_ss.write(contSS, 5, datetime.strptime(row[cols[5]], '%Y-%m-%d %H:%M:%S'), date)
+        
+        contSS += 1 
+
+    if(seguridadSigep.empty):
+        ssSI = 5
+    else:
+        ssSI = 6
+    worksheet_ss = writer.sheets['SS']
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+5, 1, '=SUM(B'+str(shapeSAP[0]+ssSI)+':B'+str(shapeSAP[0]+shapeSIGEP[0]+5)+')', bold_money)
+    worksheet_ss.write(shapeSAP[0]+4, 0, 'SS SIGEP', bold)
+
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+7, 0, 'SAP')
+    verificaDataFrameVacio(worksheet_ss, seguridadSap, shapeSAP[0]+shapeSIGEP[0]+7, 1, '=B'+str(shapeSAP[0]+2), money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+8, 0, 'SIGEP')
+    verificaDataFrameVacio(worksheet_ss, seguridadSigep, shapeSAP[0]+shapeSIGEP[0]+8, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+6), money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+9, 0, 'Diferencia')
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+9, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+8)+'-B'+str(shapeSAP[0]+shapeSIGEP[0]+9), bold_money)
+
+    cols = pagosValidar.columns.tolist()
+
+    if(pagosValidar.empty):
+        pV = 1
+    else:
+        cont = cont_recaudos_ingresos+12
+        sumatoriaNegativosPagosSap = pagosValidar[cols[1]].sum()
+        worksheet.write(cont, 3, sumatoriaNegativosPagosSap, money)
+        pV = 0
+
+    cols = egresoValidar.columns.tolist()
+    shapeEgresoV = egresoValidar.shape
+    cont = cont_recaudos_ingresos+13
+    for index, row in egresoValidar.iterrows():
+        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
+        if(row[cols[0]] == 0):
+            worksheet.write(cont, 0, 'Ajustes', merge_center)
+        worksheet.write(cont, 4, abs(row[cols[1]]), money)
+        cont = cont + 1
+
+    if(pagosValidar.empty):
+        worksheet.write(cont+1, 3, '=D'+str(cont_recaudos_ingresos+11), money)
+    else:
+        worksheet.write(cont+1, 3, '=D'+str(cont_recaudos_ingresos+11)+'-D'+str(cont_recaudos_ingresos+13), money)
+
+    dataFrames[3] = pagos
+    dataFrames[4] = egreso
+
+if egresos_sigep_dataframe.empty:
+    cont = 11
+
+#Ingresos
 worksheet.merge_range('A4:C4', 'Ingresos', merge_bold_color)
 worksheet.write(3, 3, 'SAP', merge_bold_color)
 worksheet.write(3, 4, 'SIGEP', merge_bold_color)
+worksheet.merge_range('A5:C5', 'Notas', merge_center)
+worksheet.merge_range('A'+str(cont_recaudos_ingresos+7)+':C'+str(cont_recaudos_ingresos+7), 'Total', merge_bold)
+worksheet.merge_range('A'+str(cont_recaudos_ingresos+8)+':C'+str(cont_recaudos_ingresos+8), 'Diferencias', merge_bold)
 
-cols = positivosRecaudos.columns.tolist()
-shapePositivos = positivosRecaudos.shape
-
-cont = 5
-for index, row in positivosRecaudos.iterrows():
-    worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), 'Menos ingreso '+str(int(row[cols[0]]))+' (en positivo no se registra)', merge_center)
-    worksheet.write(cont, 3, row[cols[1]], money)
-    cont = cont + 1
-
-cols = recaudosValidar.columns.tolist()
-shapeRecaudosV = recaudosValidar.shape
-cont = shapePositivos[0] + 5
-for index, row in recaudosValidar.iterrows():
-    worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
-    worksheet.write(cont, 4, abs(row[cols[1]]), money)
-    cont = cont + 1
-
-if(positivosRecaudos.empty):
-    inicial = 6
-else:
-    inicial = 5
-
-cols = ingresosValidar.columns.tolist()
-shapeIngresoV = ingresosValidar.shape
-cont = shapePositivos[0] + shapeRecaudosV[0] + 5
-for index, row in ingresosValidar.iterrows():
-    worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
-    if(row[cols[0]] == 0):
-        worksheet.write(cont, 0, 'Ajustes', merge_center)
-    worksheet.write(cont, 4, abs(row[cols[1]]), money)
-    cont = cont + 1
-
-worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+7)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+7), 'Total', merge_bold)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+6, 3, '=D5-SUM(D6:D'+str(shapePositivos[0]+inicial)+')', money)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+6, 4, '=SUM(E5:E'+str(shapePositivos[0]+shapeRecaudosV[0]+5)+')-SUM(E'+str(shapePositivos[0]+shapeRecaudosV[0]+6)+':E'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+inicial)+')', money)
-worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+8)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+8), 'Diferencias', merge_bold)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+7, 4, '=D'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+7)+'-E'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+7), bold_money)
-
-cols = pagosValidar.columns.tolist()
-worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+10)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+10), 'Egresos', merge_bold_color)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+9, 3, 'SAP', merge_bold_color)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+9, 4, 'SIGEP', merge_bold_color)
-
-if(pagosValidar.empty):
-    pV = 1
-else:
-    cont = shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+12
-    sumatoriaNegativosPagosSap = pagosValidar[cols[1]].sum()
-    worksheet.write(cont, 3, sumatoriaNegativosPagosSap, money)
-    pV = 0
-
-cols = egresoValidar.columns.tolist()
-shapeEgresoV = egresoValidar.shape
-cont = shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+13
-for index, row in egresoValidar.iterrows():
-    worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
-    if(row[cols[0]] == 0):
-        worksheet.write(cont, 0, 'Ajustes', merge_center)
-    worksheet.write(cont, 4, abs(row[cols[1]]), money)
-    cont = cont + 1
-
+#Egresos
+worksheet.merge_range('A'+str(cont_recaudos_ingresos+10)+':C'+str(cont_recaudos_ingresos+10), 'Egresos', merge_bold_color)
+worksheet.write(cont_recaudos_ingresos+9, 3, 'SAP', merge_bold_color)
+worksheet.write(cont_recaudos_ingresos+9, 4, 'SIGEP', merge_bold_color)
+worksheet.merge_range('A'+str(cont_recaudos_ingresos+11)+':C'+str(cont_recaudos_ingresos+11), 'Notas', merge_center)
 worksheet.merge_range('A'+str(cont+2)+':C'+str(cont+2), 'Total', merge_bold)
-if(pagosValidar.empty):
-    worksheet.write(cont+1, 3, '=D'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11), money)
-else:
-    worksheet.write(cont+1, 3, '=D'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11)+'-D'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+13), money)
-worksheet.write(cont+1, 4, '=SUM(E'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11)+':E'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+12)+')-SUM(E'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+13)+':E'+str(cont+pV)+')', money)
+if not egresos_sigep_dataframe.empty:
+    worksheet.write(cont+1, 4, '=SUM(E'+str(cont_recaudos_ingresos+11)+':E'+str(cont_recaudos_ingresos+12)+')-SUM(E'+str(cont_recaudos_ingresos+13)+':E'+str(cont+pV)+')', money)
 worksheet.merge_range('A'+str(cont+3)+':C'+str(cont+3), 'Diferencias', merge_bold)
 worksheet.write(cont+2, 4, '=D'+str(cont+2)+'-E'+str(cont+2), bold_money)
 
-''' HOJA DE SEGURIDAD SOCIAL SS '''
-cols = seguridadSap.columns.tolist()
-cols = [cols[0]] + [cols[1]] + cols[4:7] + [cols[9]] + cols[20:22]
-seguridadSap = seguridadSap[cols]
-shapeSAP = seguridadSap.shape
-seguridadSap.to_excel(writer, sheet_name='SS', startrow=1, header=False, index=False)
-
-if(seguridadSap.empty):
-    ssSS = 1
-else:
-    ssSS = 2
-
-worksheet = writer.sheets['SS']
-worksheet.write(shapeSAP[0]+1, 1, '=SUM(B'+str(ssSS)+':B'+str(shapeSAP[0]+1)+')', bold_money)
-worksheet.write(0, 0, 'SS SAP', bold)
-worksheet.set_column('A:AB', cell_size, None)
-worksheet.set_column('B:B', None, money)
-
-contSS = 1
-for index, row in seguridadSap.iterrows():
-    worksheet.write(contSS, 3, datetime.strptime(row[cols[3]], '%Y-%m-%d').date(), date)
-    contSS += 1 
-
-cols = seguridadSigep.columns.tolist()
-seguridadSigep = seguridadSigep[cols[0:11]]
-shapeSIGEP = seguridadSigep.shape
-
-seguridadSigep.to_excel(writer, sheet_name='SS', startrow=shapeSAP[0]+5, header=False, index=False)
-
-contSS = contSS + 4
-for index, row in seguridadSigep.iterrows():
-    worksheet.write(contSS, 5, datetime.strptime(row[cols[5]], '%Y-%m-%d %H:%M:%S'), date)
-    
-    contSS += 1 
-
-if(seguridadSigep.empty):
-    ssSI = 5
-else:
-    ssSI = 6
-worksheet = writer.sheets['SS']
-worksheet.write(shapeSAP[0]+shapeSIGEP[0]+5, 1, '=SUM(B'+str(shapeSAP[0]+ssSI)+':B'+str(shapeSAP[0]+shapeSIGEP[0]+5)+')', bold_money)
-worksheet.write(shapeSAP[0]+4, 0, 'SS SIGEP', bold)
-
-worksheet.write(shapeSAP[0]+shapeSIGEP[0]+7, 0, 'SAP')
-verificaDataFrameVacio(worksheet, seguridadSap, shapeSAP[0]+shapeSIGEP[0]+7, 1, '=B'+str(shapeSAP[0]+2), money)
-worksheet.write(shapeSAP[0]+shapeSIGEP[0]+8, 0, 'SIGEP')
-verificaDataFrameVacio(worksheet, seguridadSigep, shapeSAP[0]+shapeSIGEP[0]+8, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+6), money)
-worksheet.write(shapeSAP[0]+shapeSIGEP[0]+9, 0, 'Diferencia')
-worksheet.write(shapeSAP[0]+shapeSIGEP[0]+9, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+8)+'-B'+str(shapeSAP[0]+shapeSIGEP[0]+9), bold_money)
-
 for item in sheets:
-    if(item % 2) != 0:
-        worksheet = writer.sheets[sheets[item]]
-        if(item == 1):
-            if(enablePos == True):
-                worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2), cell_size, None)
-                worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2)+'1')
+    if sheets[item] in writer.sheets:
+        if(item % 2) != 0:
+
+            worksheet = writer.sheets[sheets[item]]
+            if(item == 1):
+                if(enablePos == True):
+                    worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2), cell_size, None)
+                    worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2)+'1')
+                else:
+                    worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2), cell_size, None)
+                    worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2)+'1')
             else:
-                worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2), cell_size, None)
-                worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(recaudos.shape[1]-2)+'1')
-        else:
-            worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-2), cell_size, None)
-            worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-2)+'1')
-        worksheet.set_column('C:D', None, None, {'hidden': True})
-        worksheet.set_column('H:L', None, None, {'hidden': True})
-        worksheet.set_column('N:Q', None, None, {'hidden': True})
-        worksheet.set_column('S:T', None, None, {'hidden': True})
-        worksheet.set_column('U:U', None, None, {'hidden': True})
-        
-        #if(xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-5) != 'Y'):
-        #    worksheet.set_column('Y:'+xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-1), None, None, {'hidden': True})
-    elif(item % 2) == 0:
-        worksheet = writer.sheets[sheets[item]]
-        worksheet.set_column('A:N', cell_size, None)
-        worksheet.autofilter('A1:N1')
+                worksheet.set_column('A:'+xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-2), cell_size, None)
+                worksheet.autofilter('A1:'+xlsxwriter.utility.xl_col_to_name(pagos.shape[1]-2)+'1')
+            worksheet.set_column('C:D', None, None, {'hidden': True})
+            worksheet.set_column('H:L', None, None, {'hidden': True})
+            worksheet.set_column('N:Q', None, None, {'hidden': True})
+            worksheet.set_column('S:T', None, None, {'hidden': True})
+            worksheet.set_column('U:U', None, None, {'hidden': True})
+            
+        elif(item % 2) == 0:
+            worksheet = writer.sheets[sheets[item]]
+            worksheet.set_column('A:N', cell_size, None)
+            worksheet.autofilter('A1:N1')
 
 correct_info = workbook.add_format({'fg_color': '#C6E0B4'})
 correct_info_money = workbook.add_format({'fg_color': '#C6E0B4', 'num_format': '#,##0'})
@@ -739,99 +790,118 @@ deducciones_color = workbook.add_format({'fg_color': '#bdd7ee', 'num_format': '#
 correct_normal_format = workbook.add_format({'fg_color': '#C6E0B4', 'num_format': '###'})
 wrong_normal_format = workbook.add_format({'fg_color': '#F8CBAD', 'num_format': '###'})
 
-#ESTILO DE RECAUDOS - INGRESOS- PAGOS - EGRESOS
-dataFrames = {1:'',2:'',3:'',4:''}
-dataFrames[1] = recaudos
-dataFrames[2] = ingreso
-dataFrames[3] = pagos
-dataFrames[4] = egreso
-totales = {1:'',2:'',3:'',4:''}
+totales = {1: 0, 2: 0, 3: 0, 4: 0}
+
+if not ingresos_sigep_dataframe.empty:
+    salarioEps = pd.DataFrame()
+
+if not egresos_sigep_dataframe.empty:
+    ccPosgrados = pd.DataFrame()
+    ccPosgradosPagos = pd.DataFrame()
+    posNegRecaudos = pd.DataFrame()
 
 for item in dataFrames:
-    posNegRecaudos = []
-    worksheet = writer.sheets[sheets[item]]
-    shapes = dataFrames[item].shape
-    shapes = shapes[0] + 2
-    totales[item] = shapes
-    col = dataFrames[item].columns.tolist()
-    cont = 1
-    for index, row in dataFrames[item].iterrows():
-        if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
-            worksheet.set_row(cont,None, correct_info)
-            style(item, row, col, worksheet, cont, correct_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, correct_info_date, correct_normal_format)
-        else:
-            worksheet.set_row(cont,None, wrong_info)
-            style(item, row, col, worksheet, cont, wrong_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, wrong_info_date, wrong_normal_format)
+    if sheets[item] in writer.sheets:
+        posNegRecaudos = []
+        worksheet = writer.sheets[sheets[item]]
+        shapes = dataFrames[item].shape
+        shapes = shapes[0] + 2
+        totales[item] = shapes
+        col = dataFrames[item].columns.tolist()
+        cont = 1
+        for index, row in dataFrames[item].iterrows():
+            if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
+                worksheet.set_row(cont,None, correct_info)
+                style(item, row, col, worksheet, cont, correct_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, correct_info_date, correct_normal_format)
+            else:
+                worksheet.set_row(cont,None, wrong_info)
+                style(item, row, col, worksheet, cont, wrong_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, wrong_info_date, wrong_normal_format)
 
-        if (str(row[col[4]]).lower()[0:6] == 'automn') | (str(row[col[9]]).lower()[0:2] == 'ss'):
-            worksheet.set_row(cont,None, ss_info)
-            style(item, row, col, worksheet, cont, ss_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, ss_info_date, None)
-        cont = cont + 1
-    if(dataFrames[item].empty):
-        shapes = 3
-    totalesSheets(worksheet, shapes-1, money, item, totaDetSap, posNegRecaudos, col, enablePos)
-    worksheet.set_row(0, 30, title)
+            if (str(row[col[4]]).lower()[0:6] == 'automn') | (str(row[col[9]]).lower()[0:2] == 'ss'):
+                worksheet.set_row(cont,None, ss_info)
+                style(item, row, col, worksheet, cont, ss_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, ss_info_date, None)
+            cont = cont + 1
+        if(dataFrames[item].empty):
+            shapes = 3
+        totalesSheets(worksheet, shapes-1, money, item, totaDetSap, posNegRecaudos, col, enablePos)
+        worksheet.set_row(0, 30, title)
 
 # Formato en excel para calculo de salud en pagos sap
-col = dataFrames[3].columns.tolist()
-worksheet = writer.sheets[sheets[3]]
-salud = workbook.add_format({'num_format': '#,##0'})
-cont = 1
-for index, row in dataFrames[3].iterrows():
-    if (str(row[col[12]]).lower()[0:8] == 'docentes') & (str(row[col[4]]).lower()[0:3] == 'men')  & ((str(row[col[4]]).lower().strip()[-1] == '1') | (str(row[col[4]]).lower().strip()[-1] == '3')):
-        value = salarioEps[row[col[0]]]
-        if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
-            worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', correct_info_money)  
-        else:
-            worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', wrong_info_money)  
+if not dataFrames[3].empty:
+    col = dataFrames[3].columns.tolist()
+    worksheet = writer.sheets[sheets[3]]
+    salud = workbook.add_format({'num_format': '#,##0'})
+    cont = 1
+    for index, row in dataFrames[3].iterrows():
+        if (str(row[col[12]]).lower()[0:8] == 'docentes') & (str(row[col[4]]).lower()[0:3] == 'men')  & ((str(row[col[4]]).lower().strip()[-1] == '1') | (str(row[col[4]]).lower().strip()[-1] == '3')):
+            if not salarioEps.empty:
+                value = salarioEps[row[col[0]]]
+                if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
+                    worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', correct_info_money)  
+                else:
+                    worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', wrong_info_money)  
     cont = cont + 1
 
 # Formato en excel para calculo de porcentajes en recaudos sap
 if(enablePos == True):
-    col = dataFrames[1].columns.tolist()
-    worksheet = writer.sheets[sheets[1]]
-    formato = workbook.add_format({'num_format': '#,##0'})
-    cont = 1
-    rowCont = 0
-    anterior = 0
-    for index, row in dataFrames[1].iterrows():
-        if(str(row[col[0]]).lower()[0:4] == '4200'):
-            if(row[col[0]] != anterior):
-                rowCont = 1
-            else:
-                worksheet.write(cont, len(col)-5, 0, deducciones_color)
-                rowCont = 0
-
-            if(rowCont == 1):
-                valueCCP = ccPosgrados[row[col[0]]]
-                if (float(row['valida']) == 0):
-                    worksheet.write(cont, len(col)-8, '=abs('+('+'.join(valueCCP))+')', correct_info_money)
-                    worksheet.write(cont, len(col)-7, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+')*'+str(porcentaje_ingresos*100)+'%', correct_info_money)   
-                    worksheet.write(cont, len(col)-6, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+'-'+xlsxwriter.utility.xl_col_to_name(len(col)-7)+str(cont+1)+')', correct_info_money)
+    if not dataFrames[1].empty:
+        col = dataFrames[1].columns.tolist()
+        worksheet = writer.sheets[sheets[1]]
+        formato = workbook.add_format({'num_format': '#,##0'})
+        cont = 1
+        rowCont = 0
+        anterior = 0
+        for index, row in dataFrames[1].iterrows():
+            if(str(row[col[0]]).lower()[0:4] == '4200'):
+                if(row[col[0]] != anterior):
+                    rowCont = 1
                 else:
-                    worksheet.write(cont, len(col)-8, '=abs('+('+'.join(valueCCP))+')', wrong_info_money)
-                    worksheet.write(cont, len(col)-7, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+')*'+str(porcentaje_ingresos*100)+'%', wrong_info_money)   
-                    worksheet.write(cont, len(col)-6, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+'-'+xlsxwriter.utility.xl_col_to_name(len(col)-7)+str(cont+1)+')', wrong_info_money)
-                rowCont = 0
+                    worksheet.write(cont, len(col)-5, 0, deducciones_color)
+                    rowCont = 0
 
-                valueCCPP = ('=Pagos_SAP!'+ccPosgradosPagos[row[col[0]]][0]) if(ccPosgradosPagos[row[col[0]]][:] != []) else 0
-                worksheet.write(cont, len(col)-5, valueCCPP, deducciones_color)
-            anterior = row[col[0]]
-        cont = cont + 1
+                if(rowCont == 1):
+                    valueCCP = ccPosgrados[row[col[0]]]
+                    if (float(row['valida']) == 0):
+                        worksheet.write(cont, len(col)-8, '=abs('+('+'.join(valueCCP))+')', correct_info_money)
+                        worksheet.write(cont, len(col)-7, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+')*'+str(porcentaje_ingresos*100)+'%', correct_info_money)   
+                        worksheet.write(cont, len(col)-6, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+'-'+xlsxwriter.utility.xl_col_to_name(len(col)-7)+str(cont+1)+')', correct_info_money)
+                    else:
+                        worksheet.write(cont, len(col)-8, '=abs('+('+'.join(valueCCP))+')', wrong_info_money)
+                        worksheet.write(cont, len(col)-7, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+')*'+str(porcentaje_ingresos*100)+'%', wrong_info_money)   
+                        worksheet.write(cont, len(col)-6, '=('+xlsxwriter.utility.xl_col_to_name(len(col)-8)+str(cont+1)+'-'+xlsxwriter.utility.xl_col_to_name(len(col)-7)+str(cont+1)+')', wrong_info_money)
+                    rowCont = 0
+
+                    valueCCPP = ('=Pagos_SAP!'+ccPosgradosPagos[row[col[0]]][0]) if(ccPosgradosPagos[row[col[0]]][:] != []) else 0
+                    worksheet.write(cont, len(col)-5, valueCCPP, deducciones_color)
+                anterior = row[col[0]]
+            cont = cont + 1
         
 # TOTALES EN CONCILIACION
 worksheet = writer.sheets['Conciliación']
-#Ingresos
-worksheet.merge_range('A5:C5', 'Notas', merge_center)
-worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11), 'Notas', merge_center)
-worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+12)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+12), 'Más SS Social Cobrada de Mas al CC', merge_center)
+
+shape_sigep_size = 0
+if len(shapeSIGEP) != 0:
+    shape_sigep_size = shapeSIGEP[0]
+shape_sap_size = 0
+if len(shapeSAP) != 0:
+    shape_sap_size = shapeSAP[0]
+
+if not egresos_sigep_dataframe.empty:
+    worksheet.merge_range('A'+str(cont_recaudos_ingresos+12)+':C'+str(cont_recaudos_ingresos+12), 'Más SS Social Cobrada de Mas al CC', merge_center)
+    worksheet.write(cont_recaudos_ingresos+11, 4, '=SS!B'+str(shape_sap_size + shape_sigep_size + 10), money)
+
 if(not pagosValidar.empty):
-    worksheet.merge_range('A'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+13)+':C'+str(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+13), 'Valores negativos SAP, no se registra en SIGEP', merge_center)
-verificaDataFrameVacio(worksheet, dataFrames[3], 4, 3, '=abs(Recaudos_SAP!B'+str(totales[1])+')', money)
-verificaDataFrameVacio(worksheet, generalSigepItems[1], 4, 4, '=Ingresos_SIGEP!B'+str(totales[2]), money)
-verificaDataFrameVacio(worksheet, dataFrames[2], shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+10, 3, '=Pagos_SAP!B'+str(totales[3]+1), money)
-verificaDataFrameVacio(worksheet, generalSigepItems[2], shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+10, 4, '=Egresos_SIGEP!B'+str(totales[4]), money)
-worksheet.write(shapePositivos[0]+shapeRecaudosV[0]+shapeIngresoV[0]+11, 4, '=SS!B'+str(shapeSAP[0]+shapeSIGEP[0]+10), money)
+    worksheet.merge_range('A'+str(cont_recaudos_ingresos+13)+':C'+str(cont_recaudos_ingresos+13), 'Valores negativos SAP, no se registra en SIGEP', merge_center)
+
+if not dataFrames[1].empty:
+    verificaDataFrameVacio(worksheet, dataFrames[1], 4, 3, '=abs(Recaudos_SAP!B'+str(totales[1])+')', money)
+
+verificaDataFrameVacio(worksheet, ingresos_sigep_dataframe, 4, 4, '=Ingresos_SIGEP!B'+str(totales[2]), money)
+if not dataFrames[3].empty:
+    verificaDataFrameVacio(worksheet, dataFrames[3], cont_recaudos_ingresos+10, 3, '=Pagos_SAP!B'+str(totales[3]+1), money)
+
+verificaDataFrameVacio(worksheet, egresos_sigep_dataframe, cont_recaudos_ingresos+10, 4, '=Egresos_SIGEP!B'+str(totales[4]), money)
+
 
 # Close the Pandas Excel writer and output the Excel file.
 writer.save()
