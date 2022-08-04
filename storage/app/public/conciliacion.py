@@ -6,6 +6,7 @@ import xlsxwriter
 import pandas as pd
 import sys
 import re
+pd.options.mode.chained_assignment = None  # default='warn'
 
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
