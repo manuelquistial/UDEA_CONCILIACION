@@ -8,9 +8,6 @@ import sys
 import re
 pd.options.mode.chained_assignment = None  # default='warn'
 
-#reload(sys)
-#sys.setdefaultencoding('utf-8')
-
 def ingresos_egresos_sigep(general_sigep_dataframe, colsInicial, tipo):
     values = general_sigep_dataframe[colsInicial[2]] == tipo
     values = general_sigep_dataframe[values]
@@ -653,7 +650,6 @@ if not egresos_sigep_dataframe.empty:
     egresoValidar = egresoValidar.reset_index()
 
     pagosV = pagos.drop('valida', 1)
-    pagosV = pagos
     pagosV.to_excel(writer, index=False, sheet_name=sheets[3])
 
     egresoV = egreso.drop('valida', 1)
@@ -670,20 +666,20 @@ if not egresos_sigep_dataframe.empty:
     cols = [cols[0]] + [cols[1]] + cols[4:7] + [cols[9]] + cols[20:22]
     seguridadSap = seguridadSap[cols]
     shapeSAP = seguridadSap.shape
-    seguridadSap.to_excel(writer, sheet_name='SS', startrow=1, header=False, index=False)
+    seguridadSap.to_excel(writer, sheet_name='SS', startrow=1, header=True, index=False)
 
     if(seguridadSap.empty):
-        ssSS = 1
-    else:
         ssSS = 2
+    else:
+        ssSS = 3
 
     worksheet_ss = writer.sheets['SS']
-    worksheet_ss.write(shapeSAP[0]+1, 1, '=SUM(B'+str(ssSS)+':B'+str(shapeSAP[0]+1)+')', bold_money)
+    worksheet_ss.write(shapeSAP[0]+2, 1, '=SUM(B'+str(ssSS)+':B'+str(shapeSAP[0]+2)+')', bold_money)
     worksheet_ss.write(0, 0, 'SS SAP', bold)
     worksheet_ss.set_column('A:AB', cell_size, None)
     worksheet_ss.set_column('B:B', None, money)
 
-    contSS = 1
+    contSS = 2
     for index, row in seguridadSap.iterrows():
         worksheet_ss.write(contSS, 3, datetime.strptime(row[cols[3]], '%Y-%m-%d').date(), date)
         contSS += 1 
@@ -692,7 +688,7 @@ if not egresos_sigep_dataframe.empty:
     seguridadSigep = seguridadSigep[cols[0:11]]
     shapeSIGEP = seguridadSigep.shape
 
-    seguridadSigep.to_excel(writer, sheet_name='SS', startrow=shapeSAP[0]+5, header=False, index=False)
+    seguridadSigep.to_excel(writer, sheet_name='SS', startrow=shapeSAP[0]+5, header=True, index=False)
 
     contSS = contSS + 4
     for index, row in seguridadSigep.iterrows():
@@ -701,19 +697,19 @@ if not egresos_sigep_dataframe.empty:
         contSS += 1 
 
     if(seguridadSigep.empty):
-        ssSI = 5
-    else:
         ssSI = 6
+    else:
+        ssSI = 7
     worksheet_ss = writer.sheets['SS']
-    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+5, 1, '=SUM(B'+str(shapeSAP[0]+ssSI)+':B'+str(shapeSAP[0]+shapeSIGEP[0]+5)+')', bold_money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+6, 1, '=SUM(B'+str(shapeSAP[0]+ssSI)+':B'+str(shapeSAP[0]+shapeSIGEP[0]+6)+')', bold_money)
     worksheet_ss.write(shapeSAP[0]+4, 0, 'SS SIGEP', bold)
 
-    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+7, 0, 'SAP')
-    verificaDataFrameVacio(worksheet_ss, seguridadSap, shapeSAP[0]+shapeSIGEP[0]+7, 1, '=B'+str(shapeSAP[0]+2), money)
-    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+8, 0, 'SIGEP')
-    verificaDataFrameVacio(worksheet_ss, seguridadSigep, shapeSAP[0]+shapeSIGEP[0]+8, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+6), money)
-    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+9, 0, 'Diferencia')
-    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+9, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+8)+'-B'+str(shapeSAP[0]+shapeSIGEP[0]+9), bold_money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+8, 0, 'SAP')
+    verificaDataFrameVacio(worksheet_ss, seguridadSap, shapeSAP[0]+shapeSIGEP[0]+8, 1, '=B'+str(shapeSAP[0]+3), money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+9, 0, 'SIGEP')
+    verificaDataFrameVacio(worksheet_ss, seguridadSigep, shapeSAP[0]+shapeSIGEP[0]+9, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+7), money)
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+10, 0, 'Diferencia')
+    worksheet_ss.write(shapeSAP[0]+shapeSIGEP[0]+10, 1, '=B'+str(shapeSAP[0]+shapeSIGEP[0]+9)+'-B'+str(shapeSAP[0]+shapeSIGEP[0]+10), bold_money)
 
     cols = pagosValidar.columns.tolist()
 
@@ -824,7 +820,7 @@ for item in dataFrames:
         col = dataFrames[item].columns.tolist()
         cont = 1
         for index, row in dataFrames[item].iterrows():
-            if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
+            if (float(row['valida']) == 0):
                 worksheet.set_row(cont,None, correct_info)
                 style(item, row, col, worksheet, cont, correct_info_money, salarioEps, ccPosgrados, ccPosgradosPagos, enablePos, posNegRecaudos, correct_info_date, correct_normal_format)
             else:
@@ -850,7 +846,7 @@ if not dataFrames[3].empty:
         if (str(row[col[12]]).lower()[0:8] == 'docentes') & (str(row[col[4]]).lower()[0:3] == 'men')  & ((str(row[col[4]]).lower().strip()[-1] == '1') | (str(row[col[4]]).lower().strip()[-1] == '3')):
             if not salarioEps.empty:
                 value = salarioEps[row[col[0]]]
-                if (float(row['valida']) == 0):# | (row['Diferencia'] == 0):
+                if (float(row['valida']) == 0):
                     worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', correct_info_money)  
                 else:
                     worksheet.write(cont, len(col)-3, '=('+('+'.join(value))+')*'+str(porcentaje_salud*100)+'%', wrong_info_money)  
