@@ -67,10 +67,10 @@ class UploadFileController extends Controller
         $ingresos = $porcentajes[0]->porcentaje_ingresos;
         $value = request()->num;
         $files = glob(storage_path('app/public/files/conciliacion')."/*".$value."_".$userId.".{xlsx,XLSX}", GLOB_BRACE);
-        if(empty($files) || (count($files) != 3)){
+        if(empty($files) || (count($files) < 2)){
           return response()->json(['empty'=>'No existen los documentos necesarios para conciliar', 'files'=>json_encode($files)]);
         }else{
-          $process = new Process("python3 ".storage_path('app/public')."/conciliacion.py ".$value." ".$files[0]." ".$files[1]." ".$files[2]." ".storage_path('app/public/files/')." ".$userId." ".$salud." ".$ingresos);
+          $process = new Process("python3 ".storage_path('app/public')."/conciliacion.py ".$value." ".storage_path('app/public/files/')." ".$userId." ".$salud." ".$ingresos);
           try {
             $process->mustRun();
             FILE::delete($files);

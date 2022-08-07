@@ -394,11 +394,11 @@ if not ingresos_sigep_dataframe.empty:
     ingresosValidar = ingresosValidar.groupby([colsI[0]]).sum()
     ingresosValidar = ingresosValidar.reset_index()
 
-    recaudosV = recaudos.drop('valida', 1)
+    recaudosV = recaudos.drop(columns='valida')
     recaudosV.to_excel(writer, index=False, sheet_name=sheets[1])
 
     colE = ingreso.columns.tolist()
-    ingresoV = ingreso.drop('valida', 1)
+    ingresoV = ingreso.drop(columns='valida')
     ingresoVAjuste = ingresoV[colE[0]].apply(lambda s: s == 0)
     ingresoVAjuste = ingresoV[ingresoVAjuste]
     ingresoAjuste = stringSigep[colsInicial[2]] == 'Ingreso'
@@ -543,8 +543,8 @@ if not egresos_sigep_dataframe.empty:
     aportesPDC = pagosSap.apply(lambda s: str(s[cols[12]]).lower() == 'aportes por ded conv', axis=1)
     aportesPDC = pagosSap[aportesPDC]
     if(aportesPDC.empty == False):
-        aportesPDCValue = aportesPDC.iloc[0][cols[0]]
-        aportes = egresos_sigep_dataframe[colE[0]] == aportesPDCValue
+        aportesPDCValue = aportesPDC.iloc[0][cols[4]]
+        aportes = egresos_sigep_dataframe[colE[0]] == int(float(aportesPDCValue))
         aportes = egresos_sigep_dataframe[aportes]
         if(aportes.empty == False):
             aportesPDCSum = aportesPDC[cols[1]].sum()
@@ -600,7 +600,7 @@ if not egresos_sigep_dataframe.empty:
             giros_sigep = egresos_sigep_dataframe[giros_sigep]
             giros_sigep_total = abs(giros_sigep[colE[1]]).sum()
 
-            giros_retefuente = giros.apply(lambda x: len(re.findall(rf'{str(giros_row[cols[4]]).lower()}\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
+            giros_retefuente = giros.apply(lambda x: len(re.findall(re.scape(str(giros_row[cols[4]]).lower())+r'\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
             giros_retefuente = giros[giros_retefuente]
 
             giros_retefuente_valor = 0
@@ -649,10 +649,10 @@ if not egresos_sigep_dataframe.empty:
     egresoValidar = egresoValidar.groupby([cols[0]]).sum()
     egresoValidar = egresoValidar.reset_index()
 
-    pagosV = pagos.drop('valida', 1)
+    pagosV = pagos.drop(columns='valida')
     pagosV.to_excel(writer, index=False, sheet_name=sheets[3])
 
-    egresoV = egreso.drop('valida', 1)
+    egresoV = egreso.drop(columns='valida')
     egresoVAjuste = egresoV[colE[0]].apply(lambda s: s == 0)
     egresoVAjuste = egresoV[egresoVAjuste]
     egresoAjuste = stringSigep[colsInicial[2]] == 'Egreso'
@@ -723,10 +723,11 @@ if not egresos_sigep_dataframe.empty:
 
     cols = egresoValidar.columns.tolist()
     shapeEgresoV = egresoValidar.shape
-    cont = cont_recaudos_ingresos+13
+    cont = cont_recaudos_ingresos+12
     for index, row in egresoValidar.iterrows():
-        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
         if(row[cols[0]] == 0):
+            cont = cont_recaudos_ingresos+13
+            worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
             worksheet.write(cont, 0, 'Ajustes', merge_center)
         worksheet.write(cont, 4, abs(row[cols[1]]), money)
         cont = cont + 1
