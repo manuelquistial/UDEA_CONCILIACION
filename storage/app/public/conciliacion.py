@@ -8,11 +8,30 @@ import sys
 import re
 pd.options.mode.chained_assignment = None  # default='warn'
 
+meses = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre"
+}
+
+periodo_mes = ""
+
 def ingresos_egresos_sigep(general_sigep_dataframe, colsInicial, tipo):
+    global periodo_mes
     values = general_sigep_dataframe[colsInicial[2]] == tipo
     values = general_sigep_dataframe[values]
     mon = pd.DatetimeIndex(values[colsInicial[3]])
     values['Periodo'] = mon.month
+    periodo_mes = meses[int(mon.month[0])]
     cols = values.columns.tolist()
     cols = [cols[9]] + [cols[7]] + cols[0:4] + [cols[10]] + cols[4:7] + [cols[8]]
     values = values[cols]
@@ -98,7 +117,7 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         worksheet.write(cont, 11, '=SUMIFS(Recaudos_SAP!B:B,Recaudos_SAP!A:A,Ingresos_SIGEP!A'+str(cont+1)+',Recaudos_SAP!G:G,@Ingresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-ABS(L'+str(cont+1)+')', format)
-        worksheet.write(cont, 5, datetime.strptime(str(row[col[5]]), '%Y-%m-%d %H:%M:%S'), date)
+        worksheet.write(cont, 5, datetime.strptime(row[col[5]].split()[0], '%Y-%m-%d'), date)
     elif(item == 3):
         worksheet.write(cont, len(col)-5, '=SUMIFS(Egresos_SIGEP!B:B,Egresos_SIGEP!A:A,Pagos_SAP!A'+str(cont+1)+',Egresos_SIGEP!G:G,@Pagos_SAP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
@@ -123,7 +142,7 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         worksheet.write(cont, 11, '=SUMIFS(Pagos_SAP!B:B,Pagos_SAP!A:A,Egresos_SIGEP!A'+str(cont+1)+',Pagos_SAP!G:G,@Egresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-L'+str(cont+1), format)
-        worksheet.write(cont, 5, datetime.strptime(str(row[col[5]]), '%Y-%m-%d %H:%M:%S'), date)
+        worksheet.write(cont, 5, datetime.strptime(row[col[5]].split()[0], '%Y-%m-%d'), date)
 
 def totalesSheets(worksheet, shapes, format, item, total, negRecaudos, col, enPos):
     moneyTotalSap = workbook.add_format({'num_format': '#,##', 'fg_color':'#ffff00'})
@@ -249,7 +268,7 @@ date = workbook.add_format({'num_format': 'mm/dd/yyyy'})
 ''' Conciliacion '''
 worksheet = writer.sheets['Conciliación']
 worksheet.set_column('A:E', cell_size, None)
-worksheet.merge_range('A1:E2', 'CONCILIACIÓN CENTRO DE COSTOS '+str(sys.argv[1]), merge_format)
+worksheet.merge_range('A1:E2', periodo_mes.upper() + ' - CONCILIACIÓN CENTRO DE COSTOS '+str(sys.argv[1]), merge_format)
 
 cont = 5
 cont_recaudos_ingresos = 0
@@ -470,7 +489,7 @@ if not egresos_sigep_dataframe.empty:
     newPagosSap = pagosSap[nanValues]
     for index, row in newPagosSap.iterrows():
         val = row[cols[4]]
-        if(val[0:2] == '81') | (val[0:5] == '10000'):
+        if(val[0:2] == '81') | (val[0:5] == '1000'):
             newPagosSap.loc[index,cols[0]] = float(row[cols[4]])
         else:
             newPagosSap.loc[index,cols[0]] = float(row[cols[2]])
@@ -544,14 +563,14 @@ if not egresos_sigep_dataframe.empty:
     aportesPDC = pagosSap[aportesPDC]
     if(aportesPDC.empty == False):
         aportesPDCValue = aportesPDC.iloc[0][cols[4]]
-        aportes = egresos_sigep_dataframe[colE[0]] == int(float(aportesPDCValue))
-        aportes = egresos_sigep_dataframe[aportes]
-        if(aportes.empty == False):
+        aportes_egresos = egresos_sigep_dataframe[colE[0]] == int(float(aportesPDCValue))
+        aportes_egresos = egresos_sigep_dataframe[aportes_egresos]
+        if(aportes_egresos.empty == False):
             aportesPDCSum = aportesPDC[cols[1]].sum()
             if(int(aportesPDCSum) == int(float(aportes.iloc[0][colE[1]]))):
-                aportes['valida'] = 0
+                aportes_egresos['valida'] = 0
                 aportesPDC['valida'] = 0
-                egresos_sigep_dataframe.update(aportes)
+                egresos_sigep_dataframe.update(aportes_egresos)
                 pagosSap.update(aportesPDC)
 
     #Calculo seguridad
@@ -600,7 +619,7 @@ if not egresos_sigep_dataframe.empty:
             giros_sigep = egresos_sigep_dataframe[giros_sigep]
             giros_sigep_total = abs(giros_sigep[colE[1]]).sum()
 
-            giros_retefuente = giros.apply(lambda x: len(re.findall(re.scape(str(giros_row[cols[4]]).lower())+r'\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
+            giros_retefuente = giros.apply(lambda x: len(re.findall(re.escape(str(giros_row[cols[4]]).lower())+r'\s[a-z]+', str(x[cols[4]]).lower())) != 0, axis=1)
             giros_retefuente = giros[giros_retefuente]
 
             giros_retefuente_valor = 0
@@ -692,7 +711,7 @@ if not egresos_sigep_dataframe.empty:
 
     contSS = contSS + 4
     for index, row in seguridadSigep.iterrows():
-        worksheet_ss.write(contSS, 5, datetime.strptime(row[cols[5]], '%Y-%m-%d %H:%M:%S'), date)
+        worksheet_ss.write(contSS, 5, datetime.strptime(row[cols[5]].split()[0], '%Y-%m-%d'), date)
         
         contSS += 1 
 
@@ -723,11 +742,10 @@ if not egresos_sigep_dataframe.empty:
 
     cols = egresoValidar.columns.tolist()
     shapeEgresoV = egresoValidar.shape
-    cont = cont_recaudos_ingresos+12
+    cont = cont_recaudos_ingresos+13
     for index, row in egresoValidar.iterrows():
+        worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
         if(row[cols[0]] == 0):
-            cont = cont_recaudos_ingresos+13
-            worksheet.merge_range('A'+str(cont+1)+':C'+str(cont+1), int(row[cols[0]]), merge_center)
             worksheet.write(cont, 0, 'Ajustes', merge_center)
         worksheet.write(cont, 4, abs(row[cols[1]]), money)
         cont = cont + 1
@@ -899,7 +917,7 @@ if len(shapeSAP) != 0:
 
 if not egresos_sigep_dataframe.empty:
     worksheet.merge_range('A'+str(cont_recaudos_ingresos+12)+':C'+str(cont_recaudos_ingresos+12), 'Más SS Social Cobrada de Mas al CC', merge_center)
-    worksheet.write(cont_recaudos_ingresos+11, 4, '=SS!B'+str(shape_sap_size + shape_sigep_size + 10), money)
+    worksheet.write(cont_recaudos_ingresos+11, 4, '=SS!B'+str(shape_sap_size + shape_sigep_size + 11), money)
 
 if(not pagosValidar.empty):
     worksheet.merge_range('A'+str(cont_recaudos_ingresos+13)+':C'+str(cont_recaudos_ingresos+13), 'Valores negativos SAP, no se registra en SIGEP', merge_center)
