@@ -567,7 +567,7 @@ if not egresos_sigep_dataframe.empty:
         aportes_egresos = egresos_sigep_dataframe[aportes_egresos]
         if(aportes_egresos.empty == False):
             aportesPDCSum = aportesPDC[cols[1]].sum()
-            if(int(aportesPDCSum) == int(float(aportes.iloc[0][colE[1]]))):
+            if(int(aportesPDCSum) == int(float(aportes_egresos.iloc[0][colE[1]]))):
                 aportes_egresos['valida'] = 0
                 aportesPDC['valida'] = 0
                 egresos_sigep_dataframe.update(aportes_egresos)
