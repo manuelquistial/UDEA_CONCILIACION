@@ -89,14 +89,14 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
         if(float(row[col[1]])) > 0:
             worksheet.set_row(cont,None, recaudo_positivo)
             worksheet.write(cont, 1,  row[col[1]], recaudo_positivo_money)
-            worksheet.write(cont, len(col)-4, '=SUMIFS(Ingresos_SIGEP!B:B,Ingresos_SIGEP!A:A,Recaudos_SAP!A'+str(cont+1)+',Ingresos_SIGEP!G:G,@Recaudos_SAP!G:G)', recaudo_positivo_money)
+            worksheet.write(cont, len(col)-4, '=SUMAR.SI.CONJUNTO(Ingresos_SIGEP!B:B,Ingresos_SIGEP!A:A,Recaudos_SAP!A'+str(cont+1)+',Ingresos_SIGEP!G:G,Recaudos_SAP!G:G)', recaudo_positivo_money)
             worksheet.write(cont, len(col)-3, '=ABS(B'+str(cont+1)+')-'+xlsxwriter.utility.xl_col_to_name(len(col)-4)+str(cont+1), recaudo_positivo_money)
             worksheet.write(cont, 5, datetime.strptime(row[col[5]], '%Y-%m-%d').date(), recaudo_positivo_date)
             worksheet.write(cont, 14, datetime.strptime(row[col[14]], '%Y-%m-%d').date(), recaudo_positivo_date)
         else:
             negRecaudos.append('B'+str(cont+1))
             worksheet.write(cont, 1,  row[col[1]], format)
-            worksheet.write(cont, len(col)-4, '=SUMIFS(Ingresos_SIGEP!B:B,Ingresos_SIGEP!A:A,Recaudos_SAP!A'+str(cont+1)+',Ingresos_SIGEP!G:G,@Recaudos_SAP!G:G)', format)
+            worksheet.write(cont, len(col)-4, '=SUMAR.SI.CONJUNTO(Ingresos_SIGEP!B:B,Ingresos_SIGEP!A:A,Recaudos_SAP!A'+str(cont+1)+',Ingresos_SIGEP!G:G,Recaudos_SAP!G:G)', format)
             worksheet.write(cont, len(col)-3, '=ABS(B'+str(cont+1)+')-'+xlsxwriter.utility.xl_col_to_name(len(col)-4)+str(cont+1), format)
             worksheet.write(cont, 4, row[col[4]], normal_valor)
             worksheet.write(cont, 5, datetime.strptime(row[col[5]], '%Y-%m-%d').date(), date)
@@ -114,12 +114,12 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
                     else:
                         worksheet.write(cont, len(col)-3, '', format)
     elif(item == 2):
-        worksheet.write(cont, 11, '=SUMIFS(Recaudos_SAP!B:B,Recaudos_SAP!A:A,Ingresos_SIGEP!A'+str(cont+1)+',Recaudos_SAP!G:G,@Ingresos_SIGEP!G:G)', format)
+        worksheet.write(cont, 11, '=SUMAR.SI.CONJUNTO(Recaudos_SAP!B:B,Recaudos_SAP!A:A,Ingresos_SIGEP!A'+str(cont+1)+',Recaudos_SAP!G:G,Ingresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-ABS(L'+str(cont+1)+')', format)
         worksheet.write(cont, 5, datetime.strptime(row[col[5]].split()[0], '%Y-%m-%d'), date)
     elif(item == 3):
-        worksheet.write(cont, len(col)-5, '=SUMIFS(Egresos_SIGEP!B:B,Egresos_SIGEP!A:A,Pagos_SAP!A'+str(cont+1)+',Egresos_SIGEP!G:G,@Pagos_SAP!G:G)', format)
+        worksheet.write(cont, len(col)-5, '=SUMAR.SI.CONJUNTO(Egresos_SIGEP!B:B,Egresos_SIGEP!A:A,Pagos_SAP!A'+str(cont+1)+',Egresos_SIGEP!G:G,Pagos_SAP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, len(col)-4, '=B'+str(cont+1)+'-'+xlsxwriter.utility.xl_col_to_name(len(col)-5)+str(cont+1), format)
         worksheet.write(cont, 5, datetime.strptime(row[col[5]], '%Y-%m-%d').date(), date)
@@ -139,7 +139,7 @@ def style(item, row, col, worksheet, cont, format, seguridad, posgrados, posgrad
                     valuePP = valuePP + ['B'+str(cont+1)]
                     posgradosPagos[row[col[0]]] = valuePP
     elif(item == 4):
-        worksheet.write(cont, 11, '=SUMIFS(Pagos_SAP!B:B,Pagos_SAP!A:A,Egresos_SIGEP!A'+str(cont+1)+',Pagos_SAP!G:G,@Egresos_SIGEP!G:G)', format)
+        worksheet.write(cont, 11, '=SUMAR.SI.CONJUNTO(Pagos_SAP!B:B,Pagos_SAP!A:A,Egresos_SIGEP!A'+str(cont+1)+',Pagos_SAP!G:G,Egresos_SIGEP!G:G)', format)
         worksheet.write(cont, 1, row[col[1]], format)
         worksheet.write(cont, 12, '=B'+str(cont+1)+'-L'+str(cont+1), format)
         worksheet.write(cont, 5, datetime.strptime(row[col[5]].split()[0], '%Y-%m-%d'), date)
@@ -347,7 +347,7 @@ if not ingresos_sigep_dataframe.empty:
             sumaR = valueT*porcentaje_ingresos
             valueProyeIngre += (valueT - sumaR)
             sumaI = int(abs(valueI[colI[1]]).sum())
-            if(int(sumaR) == sumaI):
+            if((round(sumaR) == round(sumaI)) or ((round(sumaR) - round(sumaI)) == 1) or ((round(sumaR) - round(sumaI)) == -1)):
                 valueR['valida'] = 0
                 valueI['valida'] = 0
                 recaudosSap.update(valueR)
@@ -489,7 +489,7 @@ if not egresos_sigep_dataframe.empty:
     newPagosSap = pagosSap[nanValues]
     for index, row in newPagosSap.iterrows():
         val = row[cols[4]]
-        if(val[0:2] == '81') | (val[0:5] == '1000'):
+        if(val[0:2] == '81') | (val[0:4] == '1000'):
             newPagosSap.loc[index,cols[0]] = float(row[cols[4]])
         else:
             newPagosSap.loc[index,cols[0]] = float(row[cols[2]])
@@ -558,10 +558,10 @@ if not egresos_sigep_dataframe.empty:
         uneBancolombia(pagosSap, egresos_sigep_dataframe, colP, colE, bancolombiaP, bancolombiaE)
 
     #APORTES POR DED CONV
-    cols = pagosSap.columns.tolist()
-    aportesPDC = pagosSap.apply(lambda s: str(s[cols[12]]).lower() == 'aportes por ded conv', axis=1)
+    colsPagos = pagosSap.columns.tolist()
+    aportesPDC = pagosSap.apply(lambda s: str(s[colsPagos[12]]).lower() == 'aportes por ded conv', axis=1)
     aportesPDC = pagosSap[aportesPDC]
-    if(aportesPDC.empty == False):
+    '''if(aportesPDC.empty == False):
         aportesPDCValue = aportesPDC.iloc[0][cols[4]]
         aportes_egresos = egresos_sigep_dataframe[colE[0]] == int(float(aportesPDCValue))
         aportes_egresos = egresos_sigep_dataframe[aportes_egresos]
@@ -572,6 +572,38 @@ if not egresos_sigep_dataframe.empty:
                 aportesPDC['valida'] = 0
                 egresos_sigep_dataframe.update(aportes_egresos)
                 pagosSap.update(aportesPDC)
+    '''
+    colsEgresos = egresos_sigep_dataframe.columns.tolist()
+    acuerdoMatriculas = egresos_sigep_dataframe.apply(lambda s: 'acuerdo matriculas' in str(s[colsEgresos[9]]).lower(), axis=1)
+    acuerdoMatriculas = egresos_sigep_dataframe[acuerdoMatriculas]
+
+    if aportesPDC.empty == False and acuerdoMatriculas.empty == False:
+        totalAportesPDC = abs(aportesPDC[colsPagos[1]]).sum()
+        totalAcuerdoMatriculas = abs(acuerdoMatriculas[colsEgresos[1]]).sum()
+        if totalAportesPDC == totalAcuerdoMatriculas:
+            acuerdoMatriculas['valida'] = 0
+            aportesPDC['valida'] = 0
+            egresos_sigep_dataframe.update(acuerdoMatriculas)
+            pagosSap.update(aportesPDC)
+
+    #ND
+    colsPagos = pagosSap.columns.tolist()
+    ndPagos = pagosSap.apply(lambda s: 'nd' in str(s[colsPagos[4]]).lower(), axis=1)
+    ndPagos = pagosSap[ndPagos]
+
+    colsEgresos = egresos_sigep_dataframe.columns.tolist()
+    gatosBanCorresEgresos = egresos_sigep_dataframe.apply(lambda s: 'gastos bancarios correspondientes' in str(s[colsEgresos[9]]).lower(), axis=1)
+    gatosBanCorresEgresos = egresos_sigep_dataframe[gatosBanCorresEgresos]
+
+    if ndPagos.empty == False and gatosBanCorresEgresos.empty == False:
+        totalNdPagos = abs(ndPagos[colsPagos[1]]).sum()
+        totalGatosBanCorresEgresos = abs(gatosBanCorresEgresos[colsEgresos[1]]).sum()
+        if totalNdPagos == totalGatosBanCorresEgresos:
+            gatosBanCorresEgresos['valida'] = 0
+            ndPagos['valida'] = 0
+            egresos_sigep_dataframe.update(gatosBanCorresEgresos)
+            pagosSap.update(ndPagos)
+
 
     #Calculo seguridad
     # MEN022022-3-1 or MEN022022-3-3, termina en 1 o 3
