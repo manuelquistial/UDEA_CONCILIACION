@@ -14,20 +14,23 @@
 @endsection
 
 @section('content')
-    <div class="row upload"  style="margin-top: 20px;">
+    <div class="row upload" style="margin-top: 20px;">
         <div class="row" style="width: 100%; justify-content: center;">
-            <div>
+            <div style="margin-right: 5px">
                 <input id="numero_centro" type="text" class="form-control" placeholder="Centro de Costo SAP">
             </div>
+            <div>
+                <a role="button" class="btn btn-outline-primary" id="conciliacion">Ejecutar conciliacion</a>
+            </div>
         </div>
-        <div class="row" style="width: 60%;">
+        <!--<div class="row" style="width: 60%;">
             <div class="col">
                 <a role="button" class="btn btn-outline-primary" id="conciliacion">Conciliacion</a>
             </div>
             <div class="col">
                 <a role="button" class="btn btn-outline-success" id="reservas" style="float: right;">Reservas</a>
             </div>
-        </div>
+        </div>-->
         <div class="upload-boxes" id="upload-boxes-file"></div>
     </div>
     <div class="row upload">

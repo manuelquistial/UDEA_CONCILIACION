@@ -41,10 +41,10 @@ document.body.addEventListener('dragleave', function (evt) {
     }
 }, false);
 
-document.getElementById('reservas').addEventListener('click', function (evt) {
+/*document.getElementById('reservas').addEventListener('click', function (evt) {
     let classes = document.getElementById('conciliacion');
     dataUpload(document.getElementById("reservas").id, classes);
-}, false);
+}, false);*/
 
 document.getElementById('conciliacion').addEventListener('click', function (evt) {
     let classes = document.getElementById('reservas');
@@ -55,7 +55,7 @@ function dataUpload(url, classes){
     let token = document.getElementsByTagName('meta')['csrf-token'].getAttribute("content");
     var num = document.getElementById("numero_centro").value;
     if(num != ""){
-        classes.classList.add('disabled');
+        //classes.classList.add('disabled');
         _("downloads").style.display = "flex";
         let param = "num="+num;
         var ajax = new XMLHttpRequest();
@@ -71,9 +71,9 @@ function dataUpload(url, classes){
                     _("downloads").innerHTML += '<div class="card"><div class="card-body"><h5 class="card-title">'+file.split('/').pop()+'</h5><a href="'+window.location.href+'/download?name='+file.split('/').pop()+'" role="button" class="btn btn-outline-danger">Descargar</a></div></div>'
                 });
                 _("upload-boxes-file").innerHTML = '';
-                classes.classList.remove('disabled');
+                //classes.classList.remove('disabled');
             }else if(empty != undefined){
-                classes.classList.remove('disabled');
+                //classes.classList.remove('disabled');
                 _("downloads").style.display = "inline-flex";
                 _("downloads").innerHTML = '<p id="downloads_text"></p>';
                 _("downloads_text").innerHTML += JSON.parse(event.target.responseText).empty;
@@ -83,7 +83,7 @@ function dataUpload(url, classes){
                     _("downloads_text").innerHTML += '<br>'+file.split('/').pop();
                 });
             }else if(error != undefined){
-                classes.classList.remove('disabled');
+                //classes.classList.remove('disabled');
                 _("downloads").style.display = "inline-flex";
                 _("downloads").innerHTML = '<p id="downloads_text"></p>';
                 _("downloads_text").innerHTML = error
