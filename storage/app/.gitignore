@@ -1,3 +1,2 @@
-*
-!public/
+# Except this file
 !.gitignore

@@ -1,58 +1,113 @@
-<p align="center"><img src="https://laravel.com/assets/img/components/logo-laravel.svg"></p>
+# Conciliacion
+Este es un monolito desarrollado en <a href="https://laravel.com/docs/5.5">Laravel v5.5</a> y conserva la estructura propuesta por la documentacion.<br>
+**EN PRODUCCION, la base de datos de Conciliacion se almacena en la misma base de datos de SITA.**<br><br>
+Conomientos bases para este proyecto<br>
+ - Frotend
+   - HTML
+   - Javascript
+   - JQuery
+   - CSS, Framework <a href="https://getbootstrap.com/docs/5.2/getting-started/introduction/">Bootstrap</a>
+   - REST API
+ - Backend
+   - PHP
+   - Laravel
+ - Datos
+   - Python
+   - Pandas
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/d/total.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://poser.pugx.org/laravel/framework/license.svg" alt="License"></a>
-</p>
+## Nombre de archivos para conciliacion
 
-## About Laravel
+Los documentos a subir para conciliar son
+- General_SIGEP_{centro_costos}.xlsx
+- Pagos_SAP_{centro_costos}.xlsx
+- Recaudos_SAP_{centro_costos}.xlsx
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel attempts to take the pain out of development by easing common tasks used in the majority of web projects, such as:
+## Requerimientos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP v7.0.22
+- Composer v1
+- Python v3.8
 
-Laravel is accessible, yet powerful, providing tools needed for large, robust applications.
+## Instalacion Laravel
 
-## Learning Laravel
+- Instalar paquetes del repositorio
+```
+php composer install
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of any modern web application framework, making it a breeze to get started learning the framework.
+- Permiso *775* a folders *bootstrap* y *storage*
+```
+chown {user}:www-data storage/app/public/{folder} -R
+chmod 775 storage/ -R
+```
 
-If you're not in the mood to read, [Laracasts](https://laracasts.com) contains over 1100 video tutorials on a range of topics including Laravel, modern PHP, unit testing, JavaScript, and more. Boost the skill level of yourself and your entire team by digging into our comprehensive video library.
+- Configurar *.env*
+  - Copiar *.env*
+    ```
+      cp .env.example .env
+    ```
+  - Definir *APP_ENV* como *local* para desarrollo o *production* para produccion
+  - Definir *APP_DEBUG* como *false* para produccion o *true* para desarrollo
+  - Definir en *APP_URL* la URL completa
+    - Produccion, ej: "https://comunicaciones.udea.edu.co/conciliacion/index.php"
+    - Desarrollo, ej: "http://localhost/UDEA_CONCILIACION/public/index.php"
+  - Definir conexion de base de datos
+    ```
+      DB_CONNECTION=mysql
+      DB_HOST=127.0.0.1
+      DB_PORT=3306
+      DB_DATABASE=homestead
+      DB_USERNAME=homestead
+      DB_PASSWORD=secret
+    ```
+  - Definir conexion de correo<br>
+    **Recordar que en la Universidad de Antioquia solo se pueden utilizar correos de tipo no-reply.**
+    ```
+      MAIL_DRIVER=smtp
+      MAIL_HOST=smtp.mailtrap.io
+      MAIL_PORT=2525
+      MAIL_USERNAME=null
+      MAIL_PASSWORD=null
+      MAIL_ENCRYPTION=null
+    ```
+## Migrate tablas
+**Solo ejecutar este paso en caso de crear la aplicacion desde cero.**<br>
+```
+php artisan migrate
+```
 
-## Laravel Sponsors
+## Populate seed
+**Solo ejecutar este paso en caso de crear la aplicacion desde cero.**
+```
+php artisan db:seed
+```
 
-We would like to extend our thanks to the following sponsors for helping fund on-going Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell):
+## Instalar paquetes de python
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[British Software Development](https://www.britishsoftware.co)**
-- [Fragrantica](https://www.fragrantica.com)
-- [SOFTonSOFA](https://softonsofa.com/)
-- [User10](https://user10.com)
-- [Soumettre.fr](https://soumettre.fr/)
-- [CodeBrisk](https://codebrisk.com)
-- [1Forge](https://1forge.com)
-- [TECPRESSO](https://tecpresso.co.jp/)
-- [Pulse Storm](http://www.pulsestorm.net/)
-- [Runtime Converter](http://runtimeconverter.com/)
-- [WebL'Agence](https://weblagence.com/)
+Utilizar `pip` o `pip3` segun este configurado en el sistema
 
-## Contributing
+- ``` pip install -r requirements.txt```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Instalar *pip-compile*
 
-## Security Vulnerabilities
+- ```python -m pip install pip-tools```
+## Agregar nuevas dependencias
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Las dependencias se deben agregar dentro del archivo `requirements.in` y luego ser compiladas, estas se generan en el archivo `requirements.txt`
 
-## License
+- ```pip-compile requirements.in```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Actualizar dependencias
+
+- ```pip-compile --upgrade requirements.in```
+
+## Docker
+
+Crear un contenedor de docker para el proyecto
+
+``` docker-compose up -d  ```
+
+Utilizar *.sh* de la carpeta *docker* para instalar los paquetes con *composer* y utilizar *php artisan*.
+
+- ``` sh ./docker/composer.sh install ```
+- ``` sh ./docker/php-artisan.sh migrate ```
