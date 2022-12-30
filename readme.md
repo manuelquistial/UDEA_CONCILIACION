@@ -1,6 +1,6 @@
-## Conciliacion
+# Conciliacion
 Este es un monolito desarrollado en <a href="https://laravel.com/docs/5.5">Laravel v5.5</a> y conserva la estructura propuesta por la documentacion.<br>
-**Para la conciliacion se requiere conocimientos de PYTHON y Pandas.**<br>
+**EN PRODUCCION, la base de datos de Conciliacion se almacena en la misma base de datos de SITA.**<br><br>
 Conomientos bases para este proyecto<br>
  - Frotend
    - HTML
@@ -12,9 +12,11 @@ Conomientos bases para este proyecto<br>
    - PHP
    - Laravel
  - Datos
-   - PYTHON
+   - Python
+   - Pandas
 
-## Nombre de archivos para conciliacion<br>
+## Nombre de archivos para conciliacion
+
 Los documentos a subir para conciliar son
 - General_SIGEP_{centro_costos}.xlsx
 - Pagos_SAP_{centro_costos}.xlsx
@@ -23,70 +25,89 @@ Los documentos a subir para conciliar son
 ## Requerimientos
 
 - PHP v7.0.22
-- LARAVEL v5.5
-- COMPOSER v
-- PYTHON 3.8
+- Composer v1
+- Python v3.8
 
-## Instalacion
+## Instalacion Laravel
 
-1. Instalar paquetes del repositorio
+- Instalar paquetes del repositorio
 ```
-php7 composer install
-```
-
-2. Crear carpeta *conciliacion* para almacenar los documentos a conciliar
-```
-mkdir storage/app/public/conciliacion
-```
-3. Crear carpeta *files_out* para almacenar la conciliacion
-```
-mkdir storage/app/public/files_out
+php composer install
 ```
 
-3. Permiso *775* a folders *bootstrap* y *storage*
+- Permiso *775* a folders *bootstrap* y *storage*
 ```
 chown {user}:www-data storage/app/public/{folder} -R
 chmod 775 storage/ -R
 ```
 
-3. Configurar *.env*
+- Configurar *.env*
   - Copiar *.env*
     ```
-    cp .env.example .env
+      cp .env.example .env
     ```
-  - Nombrar aplicacion en *APP_NAME*, ej: "Conciliacion - Facultad de Comunicaciones"
-  - Definir *APP_ENV* como "local" para desarrollo o "production" para produccion
-  - Definir *APP_DEBUG* como "false" para produccion o "true" para desarrollo
+  - Definir *APP_ENV* como *local* para desarrollo o *production* para produccion
+  - Definir *APP_DEBUG* como *false* para produccion o *true* para desarrollo
   - Definir en *APP_URL* la URL completa
     - Produccion, ej: "https://comunicaciones.udea.edu.co/conciliacion/index.php"
     - Desarrollo, ej: "http://localhost/UDEA_CONCILIACION/public/index.php"
   - Definir conexion de base de datos
-  ```
-    DB_CONNECTION=mysql
-    DB_HOST=127.0.0.1
-    DB_PORT=3306
-    DB_DATABASE=homestead
-    DB_USERNAME=homestead
-    DB_PASSWORD=secret
-  ```
+    ```
+      DB_CONNECTION=mysql
+      DB_HOST=127.0.0.1
+      DB_PORT=3306
+      DB_DATABASE=homestead
+      DB_USERNAME=homestead
+      DB_PASSWORD=secret
+    ```
   - Definir conexion de correo<br>
     **Recordar que en la Universidad de Antioquia solo se pueden utilizar correos de tipo no-reply.**
-  ```
-    MAIL_DRIVER=smtp
-    MAIL_HOST=smtp.mailtrap.io
-    MAIL_PORT=2525
-    MAIL_USERNAME=null
-    MAIL_PASSWORD=null
-    MAIL_ENCRYPTION=null
-   ```
-4. Instalar paquetes de python
+    ```
+      MAIL_DRIVER=smtp
+      MAIL_HOST=smtp.mailtrap.io
+      MAIL_PORT=2525
+      MAIL_USERNAME=null
+      MAIL_PASSWORD=null
+      MAIL_ENCRYPTION=null
+    ```
+## Migrate tablas
+**Solo ejecutar este paso en caso de crear la aplicacion desde cero.**<br>
 ```
-pip install -r requirements.txt
+php artisan migrate
 ```
-## Base de datos
-**Solo ejecutar este paso en caso de crear desde cero la aplicacion.**<br>
-**La DB de Conciliacion se almacena en la misma DB de SITA.**<br>
-Con este comando se crean desde cero todas las tablas de la aplicacion.
+
+## Populate seed
+**Solo ejecutar este paso en caso de crear la aplicacion desde cero.**
 ```
-php7 artisan migrate
+php artisan db:seed
 ```
+
+## Instalar paquetes de python
+
+Utilizar `pip` o `pip3` segun este configurado en el sistema
+
+- ``` pip install -r requirements.txt```
+
+## Instalar *pip-compile*
+
+- ```python -m pip install pip-tools```
+## Agregar nuevas dependencias
+
+Las dependencias se deben agregar dentro del archivo `requirements.in` y luego ser compiladas, estas se generan en el archivo `requirements.txt`
+
+- ```pip-compile requirements.in```
+
+## Actualizar dependencias
+
+- ```pip-compile --upgrade requirements.in```
+
+## Docker
+
+Crear un contenedor de docker para el proyecto
+
+``` docker-compose up -d  ```
+
+Utilizar *.sh* de la carpeta *docker* para instalar los paquetes con *composer* y utilizar *php artisan*.
+
+- ``` sh ./docker/composer.sh install ```
+- ``` sh ./docker/php-artisan.sh migrate ```
