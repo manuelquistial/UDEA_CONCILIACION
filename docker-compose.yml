@@ -17,9 +17,9 @@ services:
     networks:
       - backend
 
-  mysql-db:
+  mysql-db-conciliacion:
     image: mysql
-    container_name: mysql-db
+    container_name: mysql-db-conciliacion
     command: --default-authentication-plugin=mysql_native_password
     environment:
       - MYSQL_ROOT_PASSWORD=admin
@@ -37,9 +37,9 @@ services:
     ports:
       - 8080:80
     depends_on:
-      - mysql-db
+      - mysql-db-conciliacion
     links:
-      - mysql-db:db
+      - mysql-db-conciliacion:db
     networks:
       - backend
 

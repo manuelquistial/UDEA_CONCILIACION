@@ -35,6 +35,11 @@ Los documentos a subir para conciliar son
 php composer install
 ```
 
+- Crear aplicacion key
+```
+php artisan key:generate
+```
+
 - Permiso *775* a folders *bootstrap* y *storage*
 ```
 chown {user}:www-data storage/app/public/{folder} -R
@@ -111,3 +116,7 @@ Utilizar *.sh* de la carpeta *docker* para instalar los paquetes con *composer* 
 
 - ``` sh ./docker/composer.sh install ```
 - ``` sh ./docker/php-artisan.sh migrate ```
+
+### IP docker image
+``` docker inspect {image_id} --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ```
+
